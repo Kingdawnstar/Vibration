@@ -1,0 +1,200 @@
+rules_version = '2';
+service cloudfirevers.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global safety net - default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global fortress helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'mrclabutu@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 3. Entity level schema validators
+    function isValidUser(data) {
+      return data.userId is string 
+        && data.userId == request.auth.uid
+        && data.name is string 
+        && data.name.size() > 0 
+        && data.name.size() <= 150
+        && data.email is string 
+        && data.email.size() > 0 
+        && data.email.size() <= 150
+        && data.role is string 
+        && (data.role == 'user' || data.role == 'admin');
+    }
+
+    function isValidPost(data) {
+      return data.postId is string 
+        && data.postId.size() > 0
+        && data.postId.size() <= 128
+        && data.title is string 
+        && data.title.size() > 0 
+        && data.title.size() <= 200
+        && data.slug is string 
+        && data.content is string 
+        && data.category is string 
+        && data.likesCount is int
+        && data.commentsCount is int;
+    }
+
+    function isValidComment(data) {
+      return data.commentId is string 
+        && data.commentId.size() > 0
+        && data.postId is string
+        && data.userId is string 
+        && data.userId == request.auth.uid
+        && data.userName is string 
+        && data.text is string 
+        && data.text.size() > 0 
+        && data.text.size() <= 1000;
+    }
+
+    function isValidLike(data) {
+      return data.likeId is string 
+        && data.postId is string 
+        && data.userId is string 
+        && data.userId == request.auth.uid;
+    }
+
+    function isValidNotification(data) {
+      return data.notificationId is string 
+        && data.userId is string 
+        && data.title is string 
+        && data.message is string 
+        && data.postId is string 
+        && data.read is bool;
+    }
+
+    function isValidSubscriber(data) {
+      return data.subscriberId is string
+        && data.email is string
+        && data.email.size() > 0
+        && data.email.size() <= 150
+        && data.joinedAt is string;
+    }
+
+    function isValidReview(data) {
+      return data.reviewId is string
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 150
+        && data.rating is int
+        && data.rating >= 1
+        && data.rating <= 5
+        && data.proficientLevel is string
+        && data.comment is string
+        && data.comment.size() > 0
+        && data.comment.size() <= 2000;
+    }
+
+    function isValidCurriculumItem(data) {
+      return data.itemId is string
+        && data.level is string
+        && (data.level == 'Beginner' || data.level == 'Intermediate' || data.level == 'Advanced')
+        && data.title is string
+        && data.title.size() > 0
+        && data.title.size() <= 200
+        && data.description is string
+        && data.description.size() <= 1000
+        && data.order is int;
+    }
+
+    // 4. Match statements per collection
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && isAdmin();
+      allow create: if isVerifiedUser() && isValidUser(incoming()) && userId == request.auth.uid;
+      allow update: if (isVerifiedUser() && isValidUser(incoming()) && userId == request.auth.uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{authUid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidPost(incoming());
+      allow update: if (isAdmin() && isValidPost(incoming())) || (
+        // Allow public to like/comment count changes synchronously
+        isVerifiedUser() && isValidPost(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount'])
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isVerifiedUser() && isValidComment(incoming());
+      allow update: if isVerifiedUser() && isValidComment(incoming()) && existing().userId == request.auth.uid && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['text'])
+      );
+      allow delete: if isVerifiedUser() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /likes/{likeId} {
+      allow read: if true;
+      allow create: if isVerifiedUser() && isValidLike(incoming()) && likeId == (request.auth.uid + '_' + incoming().postId);
+      allow delete: if isVerifiedUser() && (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isVerifiedUser() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin() && isValidNotification(incoming());
+      allow update: if isVerifiedUser() && (resource.data.userId == request.auth.uid) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+      );
+      allow delete: if isAdmin() || (isVerifiedUser() && resource.data.userId == request.auth.uid);
+    }
+
+    match /subscribers/{subscriberId} {
+      allow read: if isAdmin();
+      allow create, update: if isValidSubscriber(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidReview(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /curriculum/{itemId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidCurriculumItem(incoming());
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile with role and direct information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The unique user uid matching Firebase Authentication" },
+        "name": { "type": "string", "description": "Display name of the user" },
+        "email": { "type": "string", "description": "Email address of the user" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "Role of the user, defaults to user" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["userId", "name", "email", "role", "createdAt"]
+    },
+    "Post": {
+      "title": "Academy Post",
+      "description": "A blog or video lesson post created by academy admins",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string", "description": "Unique post identifier" },
+        "title": { "type": "string", "description": "Title of the post" },
+        "slug": { "type": "string", "description": "Url friendly slug" },
+        "content": { "type": "string", "description": "Markdown and HTML formatted lesson text" },
+        "category": { "type": "string", "description": "Primary category (Beginner, Chords, Gospel, etc.)" },
+        "videoUrl": { "type": "string", "description": "Optional YouTube embed or video link" },
+        "media": {
+          "type": "array",
+          "description": "Attached media documents like tabs, images, and worksheets"
+        },
+        "likesCount": { "type": "number", "description": "Aggregate count of likes" },
+        "commentsCount": { "type": "number", "description": "Aggregate count of comments" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["postId", "title", "slug", "content", "category", "likesCount", "commentsCount", "createdAt"]
+    },
+    "Comment": {
+      "title": "Post Comment",
+      "description": "User comments on posts",
+      "type": "object",
+      "properties": {
+        "commentId": { "type": "string", "description": "Unique comment identifier" },
+        "postId": { "type": "string", "description": "Post being commented on" },
+        "userId": { "type": "string", "description": "User who commented" },
+        "userName": { "type": "string", "description": "User display name" },
+        "userEmail": { "type": "string", "description": "User email" },
+        "text": { "type": "string", "description": "Content of the comment" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["commentId", "postId", "userId", "userName", "text", "createdAt"]
+    },
+    "Like": {
+      "title": "Post Like",
+      "description": "Exactly one unique like per user per post representation",
+      "type": "object",
+      "properties": {
+        "likeId": { "type": "string", "description": "Id built as userId_postId" },
+        "postId": { "type": "string", "description": "Post liked" },
+        "userId": { "type": "string", "description": "User who liked" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["likeId", "postId", "userId", "createdAt"]
+    },
+    "Notification": {
+      "title": "User Notification",
+      "description": "Notification sent to users regarding newly published guitar lessons",
+      "type": "object",
+      "properties": {
+        "notificationId": { "type": "string", "description": "Unique notification identifier" },
+        "userId": { "type": "string", "description": "Recipient user identifier" },
+        "title": { "type": "string", "description": "Title of the notification" },
+        "message": { "type": "string", "description": "Message snippet or preview" },
+        "postId": { "type": "string", "description": "Link to the newly published lesson" },
+        "read": { "type": "boolean", "description": "Read status toggle" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["notificationId", "userId", "title", "message", "postId", "read", "createdAt"]
+    },
+    "Admin": {
+      "title": "Academy Admin Role",
+      "description": "Database reference for administrative users",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "The administrative email address authorized" }
+      },
+      "required": ["email"]
+    },
+    "Subscriber": {
+      "title": "Academy Newsletter Subscriber",
+      "description": "Email address registered to receive automatic updates and notifications when new lessons are posted",
+      "type": "object",
+      "properties": {
+        "subscriberId": { "type": "string", "description": "Unique subscriber ID" },
+        "email": { "type": "string", "description": "Registered email address" },
+        "joinedAt": { "type": "string", "format": "date-time", "description": "Subscribed timestamp" }
+      },
+      "required": ["subscriberId", "email", "joinedAt"]
+    },
+    "Review": {
+      "title": "Student Review",
+      "description": "Testimonial or review posted/managed by the admin",
+      "type": "object",
+      "properties": {
+        "reviewId": { "type": "string", "description": "Unique review ID" },
+        "name": { "type": "string", "description": "Student display name" },
+        "rating": { "type": "number", "description": "Star rating 1-5" },
+        "proficientLevel": { "type": "string", "description": "Student level (Beginner, Intermediate, Advanced)" },
+        "comment": { "type": "string", "description": "Review text details" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["reviewId", "name", "rating", "proficientLevel", "comment", "createdAt"]
+    },
+    "CurriculumItem": {
+      "title": "Curriculum Item Node",
+      "description": "Interactive structured syllabus item managed by the super user",
+      "type": "object",
+      "properties": {
+        "itemId": { "type": "string", "description": "Unique curriculum item ID" },
+        "level": { "type": "string", "description": "Level category (Beginner, Intermediate, Advanced)" },
+        "title": { "type": "string", "description": "Syllabus topic title" },
+        "description": { "type": "string", "description": "Core technical details or goals" },
+        "postId": { "type": "string", "description": "Optional post link mapping" },
+        "order": { "type": "number", "description": "Sorting priority in curriculum list" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["itemId", "level", "title", "description", "order", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Secure storage of registered guitar academy students"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/Post" },
+      "description": "Guitar lesson blog nodes with attached chords, video links and tabs"
+    },
+    "/comments/{commentId}": {
+      "schema": { "$ref": "#/entities/Comment" },
+      "description": "Comments on guitar lessons"
+    },
+    "/likes/{likeId}": {
+      "schema": { "$ref": "#/entities/Like" },
+      "description": "Strict likes mapping collection to ensure 1:1 user-to-post relationship"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Disseminated notification feeds for student lesson announcements"
+    },
+    "/admins/{authUid}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Explicit database administrator table map"
+    },
+    "/subscribers/{subscriberId}": {
+      "schema": { "$ref": "#/entities/Subscriber" },
+      "description": "Email subscriber lists for push updates"
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Student review and rating list testimonials"
+    },
+    "/curriculum/{itemId}": {
+      "schema": { "$ref": "#/entities/CurriculumItem" },
+      "description": "Interactive syllabus modules for beginners, intermediate, and advanced students"
+    }
+  }
+}
