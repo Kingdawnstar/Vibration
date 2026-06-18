@@ -4,7 +4,8 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { collection, query, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, increment, addDoc } from 'firebase/firestore';
 import { 
   Music, BookOpen, Search, Filter, ShieldAlert, Sparkles, CheckSquare, 
-  HelpCircle, ChevronRight, UserCheck, Star, PlayCircle, Mail, Bell, Check
+  HelpCircle, ChevronRight, UserCheck, Star, PlayCircle, Mail, Bell, Check,
+  Layers, MessageSquare
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import PostCard from './components/PostCard';
@@ -76,6 +77,53 @@ export default function App() {
     } catch (err: any) {
       console.error('Newsletter enrollment error:', err);
       setSubscribingStatus('error');
+    }
+  };
+
+  // States for student submitting dynamic review on the frontpage
+  const [showWriteReview, setShowWriteReview] = useState(false);
+  const [studentRating, setStudentRating] = useState(5);
+  const [studentLevel, setStudentLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
+  const [studentComment, setStudentComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
+
+  const handlePublishStudentReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentComment || studentComment.trim().length === 0) {
+      alert('Review comment text is required.');
+      return;
+    }
+    if (!user) {
+      alert('Please log in using Google to publish a student review!');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    setReviewFeedback(null);
+    const reviewsPath = 'reviews';
+    try {
+      const docRef = doc(collection(db, reviewsPath));
+      const studentReviewPayload = {
+        reviewId: docRef.id,
+        name: user.displayName || 'Vibration Student',
+        rating: Number(studentRating),
+        proficientLevel: studentLevel,
+        comment: studentComment.trim(),
+        createdAt: new Date().toISOString()
+      };
+      await setDoc(docRef, studentReviewPayload);
+      
+      // Reset form variables
+      setStudentComment('');
+      setStudentRating(5);
+      setReviewFeedback('Thank you! Your verified student rating was successfully published live!');
+      setTimeout(() => setReviewFeedback(null), 8000);
+      setShowWriteReview(false);
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.CREATE, reviewsPath);
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -856,23 +904,226 @@ export default function App() {
                       )}
                     </div>
 
+                    {/* Interactive Syllabus & Study Outline (Responsive - highly visible on all screens) */}
+                    {curriculum.length > 0 && (
+                      <div className={`rounded-3xl border p-8 space-y-6 transition-colors duration-300 ${
+                        isDarkMode 
+                          ? 'border-zinc-800 bg-[#0F0F0F] text-zinc-100' 
+                          : 'border-zinc-200 bg-white shadow-sm text-zinc-800'
+                      }`} id="interactive_syllabus_showcase">
+                        <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-4 ${
+                          isDarkMode ? 'border-zinc-800' : 'border-zinc-200'
+                        }`}>
+                          <div>
+                            <h3 className={`text-xl font-serif italic flex items-center gap-2 ${
+                              isDarkMode ? 'text-white' : 'text-zinc-900'
+                            }`}>
+                              <Layers className="h-5 w-5 text-amber-500 font-bold" /> Interactive Syllabus & Academy Roadmap
+                            </h3>
+                            <p className="text-xs text-zinc-500">A structured outline of masterclasses designed to take you from absolute beginner to gospel master.</p>
+                          </div>
+                          <span className="rounded-full bg-amber-500/10 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-amber-500 font-bold">
+                            {curriculum.length} Core Modules
+                          </span>
+                        </div>
+
+                        <div className="grid gap-6 md:grid-cols-3">
+                          {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
+                            const levelItems = curriculum.filter(i => i.level === level);
+                            return (
+                              <div key={level} className={`rounded-2xl p-5 border flex flex-col transition-colors ${
+                                isDarkMode 
+                                  ? 'bg-zinc-950/45 border-zinc-900/60' 
+                                  : 'bg-zinc-50 border-zinc-205/60 border-zinc-200'
+                              }`}>
+                                <div className="flex items-center justify-between mb-4">
+                                  <span className={`text-[9px] font-mono font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${
+                                    level === 'Beginner' ? 'bg-emerald-500/15 text-emerald-450' :
+                                    level === 'Intermediate' ? 'bg-blue-500/15 text-blue-400' :
+                                    'bg-red-500/15 text-red-500'
+                                  }`}>
+                                    {level} Level
+                                  </span>
+                                  <span className="text-[10px] font-mono text-zinc-500">
+                                    {levelItems.length} {levelItems.length === 1 ? 'topic' : 'topics'}
+                                  </span>
+                                </div>
+
+                                {levelItems.length === 0 ? (
+                                  <p className="text-[11px] text-zinc-500 italic py-4">Roadmap outline updates coming soon...</p>
+                                ) : (
+                                  <div className="space-y-4 flex-1">
+                                    {levelItems.map((item) => {
+                                      const hasLink = posts.some(p => p.postId === item.postId);
+                                      return (
+                                        <div key={item.itemId} className={`group relative pl-4 border-l transition-all ${
+                                          isDarkMode ? 'border-zinc-800' : 'border-zinc-250 border-zinc-200'
+                                        }`}>
+                                          <div className="absolute left-0 top-1.5 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 group-hover:bg-amber-400 transition-colors" />
+                                          <h4 className={`text-xs font-semibold ${
+                                            isDarkMode ? 'text-zinc-200' : 'text-zinc-800'
+                                          }`}>
+                                            {item.title}
+                                          </h4>
+                                          <p className="text-[10px] text-zinc-500 mt-1 leading-normal">
+                                            {item.description}
+                                          </p>
+                                          {item.postId && hasLink && (
+                                            <button
+                                              onClick={() => {
+                                                const p = posts.find(post => post.postId === item.postId);
+                                                if (p) setSelectedPost(p);
+                                              }}
+                                              className="mt-2 inline-flex items-center gap-1 text-[10px] font-mono font-bold text-amber-500 hover:text-amber-400 uppercase tracking-widest transition-colors cursor-pointer"
+                                            >
+                                              ⚡ Open Masterclass →
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Student Reviews & Testimonials Section */}
                     {reviews.length > 0 && (
-                      <div className="rounded-3xl border border-zinc-800 bg-[#0F0F0F] p-8 space-y-6" id="student_reviews_section">
-                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-zinc-800 pb-4">
+                      <div className={`rounded-3xl border p-8 space-y-6 transition-colors duration-300 ${
+                        isDarkMode 
+                          ? 'border-zinc-800 bg-[#0F0F0F] text-zinc-100' 
+                          : 'border-zinc-200 bg-white shadow-sm text-zinc-800'
+                      }`} id="student_reviews_section">
+                        <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-4 ${
+                          isDarkMode ? 'border-zinc-800' : 'border-zinc-200'
+                        }`}>
                           <div>
-                            <h3 className="text-xl font-serif italic text-white flex items-center gap-2">
+                            <h3 className={`text-xl font-serif italic flex items-center gap-2 ${
+                              isDarkMode ? 'text-white' : 'text-zinc-900'
+                            }`}>
                               <Star className="h-5 w-5 text-amber-500 fill-amber-500" /> Student Testimonials
                             </h3>
                             <p className="text-xs text-zinc-500">Real feedback from guitarists who found their sound and owned their vibration.</p>
                           </div>
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star key={s} className="h-4 w-4 text-amber-500 fill-amber-500" />
-                            ))}
-                            <span className="text-xs font-mono font-bold text-zinc-400 ml-1.5 uppercase tracking-widest">4.9/5 Average rating</span>
+                          
+                          {/* Student Review Actions */}
+                          <div className="flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star key={s} className="h-4 w-4 text-amber-500 fill-amber-500" />
+                              ))}
+                              <span className="text-xs font-mono font-bold text-zinc-400 ml-1.5 uppercase tracking-widest">4.9/5 Average rating</span>
+                            </div>
+                            
+                            {user ? (
+                              <button
+                                onClick={() => { setShowWriteReview(!showWriteReview); setReviewFeedback(null); }}
+                                className="rounded-xl bg-zinc-900 text-zinc-350 hover:text-white border border-zinc-700 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-zinc-800 transition-all cursor-pointer"
+                              >
+                                {showWriteReview ? 'Close Testimonial Form' : '✍️ Write review'}
+                              </button>
+                            ) : (
+                              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
+                                (Sign in to submit rating)
+                              </span>
+                            )}
                           </div>
                         </div>
+
+                        {/* Interactive Review writer component */}
+                        {showWriteReview && user && (
+                          <form onSubmit={handlePublishStudentReview} className={`rounded-2xl p-5 border animate-fadeIn space-y-4 w-full ${
+                            isDarkMode ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
+                          }`}>
+                            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
+                              <h4 className={`text-xs font-serif italic ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
+                                Share your learning story with the Academy!
+                              </h4>
+                              <span className="text-[10px] font-mono text-zinc-500">Posting as {user.displayName || user.email}</span>
+                            </div>
+
+                            {reviewFeedback && (
+                              <div className="rounded-xl border border-emerald-950 bg-emerald-950/20 px-3.5 py-2.5 text-[11px] text-emerald-400 font-medium">
+                                {reviewFeedback}
+                              </div>
+                            )}
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div>
+                                <label className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Guitar Skill Proficiency</label>
+                                <select
+                                  value={studentLevel}
+                                  onChange={(e: any) => setStudentLevel(e.target.value)}
+                                  className={`w-full rounded-xl border px-3.5 py-2 text-xs focus:outline-none focus:border-amber-500 ${
+                                    isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-200 text-zinc-700'
+                                  }`}
+                                >
+                                  <option value="Beginner">Beginner level</option>
+                                  <option value="Intermediate">Intermediate level</option>
+                                  <option value="Advanced">Advanced level</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Star Rating</label>
+                                <div className="flex items-center gap-2 mt-1">
+                                  {[1, 2, 3, 4, 5].map((stars) => (
+                                    <button
+                                      type="button"
+                                      key={stars}
+                                      onClick={() => setStudentRating(stars)}
+                                      className="focus:outline-none transition-transform hover:scale-110 cursor-pointer"
+                                    >
+                                      <Star 
+                                        className={`h-6 w-6 ${
+                                          stars <= studentRating ? 'text-amber-500 fill-amber-500' : 'text-zinc-600'
+                                        }`} 
+                                      />
+                                    </button>
+                                  ))}
+                                  <span className="text-xs font-mono font-bold text-zinc-400 pl-1">
+                                    ({studentRating} Stars)
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Learning Testimonial Text</label>
+                              <textarea
+                                rows={3}
+                                value={studentComment}
+                                onChange={(e) => setStudentComment(e.target.value)}
+                                placeholder="Write 1-2 positive sentences about your experience..."
+                                className={`w-full rounded-xl border p-3.5 text-xs focus:outline-none focus:border-amber-500 ${
+                                  isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-250 text-zinc-800'
+                                }`}
+                                maxLength={800}
+                                required
+                              />
+                            </div>
+
+                            <div className="flex justify-end pt-1">
+                              <button
+                                type="submit"
+                                disabled={isSubmittingReview}
+                                className="rounded-xl bg-amber-500 hover:bg-amber-400 text-black px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide transition-all disabled:opacity-50 cursor-pointer"
+                              >
+                                {isSubmittingReview ? 'Publishing...' : 'Publish Testimonial Review'}
+                              </button>
+                            </div>
+                          </form>
+                        )}
+
+                        {reviewFeedback && !showWriteReview && (
+                          <div className="rounded-xl border border-emerald-950 bg-emerald-950/20 px-3.5 py-2.5 text-[11px] text-emerald-400 font-medium animate-fadeIn">
+                            {reviewFeedback}
+                          </div>
+                        )}
 
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                           {reviews.map((rev) => (

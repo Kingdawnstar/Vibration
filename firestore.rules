@@ -1,5 +1,5 @@
 rules_version = '2';
-service cloudfirevers.firestore {
+service cloud.firestore {
   match /databases/{database}/documents {
 
     // 1. Global safety net - default deny
@@ -187,7 +187,8 @@ service cloudfirevers.firestore {
 
     match /reviews/{reviewId} {
       allow read: if true;
-      allow create, update: if isAdmin() && isValidReview(incoming());
+      allow create: if (isVerifiedUser() && isValidReview(incoming())) || isAdmin();
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
