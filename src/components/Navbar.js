@@ -11,7 +11,7 @@ export default function Navbar({
   onOpenAdmin, 
   currentView, 
   isDarkMode, 
-  onToggleDarkMode 
+  onToggleDarkMode
 }) {
   const [notifications, setNotifications] = useState([]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
@@ -120,7 +120,7 @@ export default function Navbar({
               Vibration
             </h1>
             <p style={{ fontSize: '0.625rem', fontFamily: 'var(--font-sans)', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.25rem' }}>
-              WhatsApp Guitar School
+              Guitar Academy
             </p>
           </div>
         </div>

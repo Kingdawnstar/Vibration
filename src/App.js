@@ -11,6 +11,8 @@ import Navbar from './components/Navbar.js';
 import PostCard from './components/PostCard.js';
 import PostDetail from './components/PostDetail.js';
 import AdminPanel from './components/AdminPanel.js';
+import GuitarSlider from './components/GuitarSlider.js';
+import ScrollReveal from './components/ScrollReveal.js';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -699,43 +701,48 @@ export default function App() {
                 ) : (
                   <>
                     {/* Hero branding header */}
-                    <div 
-                      className="hero-section"
-                      id="academy_hero_billboard"
-                    >
-                      <div className="relative" style={{ zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <span className="badge badge-beginner" style={{ padding: '0.25rem 0.5rem', fontSize: '0.625rem', fontWeight: 'bold' }}>
-                            VIBRATION PREMIUM
-                          </span>
-                          <span className="badge badge-advanced" style={{ padding: '0.25rem 0.5rem', fontSize: '0.625rem', fontWeight: 'bold' }}>
-                            GUITAR STUDIO
-                          </span>
-                        </div>
-
-                        <h2 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-serif)', fontWeight: 'bold', color: '#ffffff', margin: 0, lineHeight: 1.1 }}>
-                          Vibration Guitar Academy
-                        </h2>
-                        
-                        <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--primary)', fontSize: '1rem', margin: 0 }}>
-                          "Feel the strings, find your sound and own your vibration"
-                        </p>
-                        
-                        <p style={{ margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontSize: '0.8125rem', color: '#e4e4e7', maxWidth: '400px', lineHeight: 1.5 }}>
-                          Master smooth rhythm, soulful chord projections, and scales with premium files downloadables and WhatsApp companion tools.
-                        </p>
-
-                        <div className="flex-row" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.625rem', fontFamily: 'var(--font-mono)' }}>
-                          <div style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(0, 0, 0, 0.65)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                            <span className="pulse-indicator" style={{ height: '0.5rem', width: '0.5rem', borderRadius: '50%', backgroundColor: 'var(--primary)' }} />
-                            <span>{posts.length}+ lesson modules</span>
+                    <ScrollReveal>
+                      <div 
+                        className="hero-section"
+                        id="academy_hero_billboard"
+                      >
+                        <div className="relative" style={{ zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <span className="badge badge-beginner" style={{ padding: '0.25rem 0.5rem', fontSize: '0.625rem', fontWeight: 'bold' }}>
+                              VIBRATION PREMIUM
+                            </span>
+                            <span className="badge badge-advanced" style={{ padding: '0.25rem 0.5rem', fontSize: '0.625rem', fontWeight: 'bold' }}>
+                              GUITAR STUDIO
+                            </span>
                           </div>
-                          <div style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(0, 0, 0, 0.65)', border: '1px solid var(--border-color)' }}>
-                            <span>Verified Students Access</span>
+
+                          <h2 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-serif)', fontWeight: 'bold', color: '#ffffff', margin: 0, lineHeight: 1.1 }}>
+                            Vibration Guitar Academy
+                          </h2>
+                          
+                          <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--primary)', fontSize: '1rem', margin: 0 }}>
+                            "Feel the strings, find your sound and own your vibration"
+                          </p>
+                          
+                          <p style={{ margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontSize: '0.8125rem', color: '#e4e4e7', maxWidth: '400px', lineHeight: 1.5 }}>
+                            Master smooth rhythm, soulful chord projections, and scales with premium files downloadables and WhatsApp companion tools.
+                          </p>
+
+                          <div className="flex-row" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.625rem', fontFamily: 'var(--font-mono)' }}>
+                            <div style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(0, 0, 0, 0.65)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                              <span className="pulse-indicator" style={{ height: '0.5rem', width: '0.5rem', borderRadius: '50%', backgroundColor: 'var(--primary)' }} />
+                              <span>{posts.length}+ lesson modules</span>
+                            </div>
+                            <div style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(0, 0, 0, 0.65)', border: '1px solid var(--border-color)' }}>
+                              <span>Verified Students Access</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </ScrollReveal>
+
+                    {/* Rare Guitars Interactive Slide Showcase */}
+                    <GuitarSlider />
 
                     {/* Roadmap Outline */}
                     {curriculum.length > 0 && (
@@ -798,53 +805,55 @@ export default function App() {
                     )}
 
                     {/* VIP Student Alert Desk Form */}
-                    <div 
-                      className="card"
-                      id="student_newsletter_signup"
-                      style={{ padding: '1.5rem', border: '1px solid var(--border-color)' }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <span className="badge badge-beginner animate-fade" style={{ display: 'inline-flex', alignSelf: 'flex-start', fontSize: '0.625rem', fontWeight: 'bold' }}>
-                          📨 Announcements alerts desk
-                        </span>
-                        <h3 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-serif)', color: 'var(--text-main)', margin: 0 }}>
-                          Instant classroom broadcast alerts
-                        </h3>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
-                          Add your email to receive automatic live notifications directly. Whenever the academy instructor publishes new tutorials, chord sheets, progression tabs or blog notes, we broadcast standard email updates!
-                        </p>
-                        
-                        <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                          <input
-                            type="email"
-                            required
-                            value={subscriberEmail}
-                            onChange={(e) => setSubscriberEmail(e.target.value)}
-                            placeholder="your.email@example.com"
-                            className="form-control"
-                            style={{ flex: 1, minWidth: '150px' }}
-                          />
-                          <button
-                            type="submit"
-                            disabled={subscribingStatus === 'loading'}
-                            className="btn btn-primary"
-                          >
-                            <span>Join Classroom Alerts list</span>
-                          </button>
-                        </form>
-                        
-                        {subscribingStatus === 'success' && (
-                          <p style={{ color: 'var(--emerald)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>
-                            ✨ Added successfully! You will now receive automatic notifications.
+                    <ScrollReveal>
+                      <div 
+                        className="card"
+                        id="student_newsletter_signup"
+                        style={{ padding: '1.5rem', border: '1px solid var(--border-color)' }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <span className="badge badge-beginner animate-fade" style={{ display: 'inline-flex', alignSelf: 'flex-start', fontSize: '0.625rem', fontWeight: 'bold' }}>
+                            📨 Announcements alerts desk
+                          </span>
+                          <h3 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-serif)', color: 'var(--text-main)', margin: 0 }}>
+                            Instant classroom broadcast alerts
+                          </h3>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                            Add your email to receive automatic live notifications directly. Whenever the academy instructor publishes new tutorials, chord sheets, progression tabs or blog notes, we broadcast standard email updates!
                           </p>
-                        )}
-                        {subscribingStatus === 'error' && (
-                          <p style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>
-                            ❌ Subscription error. Please verify input and retry.
-                          </p>
-                        )}
+                          
+                          <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                            <input
+                              type="email"
+                              required
+                              value={subscriberEmail}
+                              onChange={(e) => setSubscriberEmail(e.target.value)}
+                              placeholder="your.email@example.com"
+                              className="form-control"
+                              style={{ flex: 1, minWidth: '150px' }}
+                            />
+                            <button
+                              type="submit"
+                              disabled={subscribingStatus === 'loading'}
+                              className="btn btn-primary"
+                            >
+                              <span>Join Classroom Alerts list</span>
+                            </button>
+                          </form>
+                          
+                          {subscribingStatus === 'success' && (
+                            <p style={{ color: 'var(--emerald)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>
+                              ✨ Added successfully! You will now receive automatic notifications.
+                            </p>
+                          )}
+                          {subscribingStatus === 'error' && (
+                            <p style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>
+                              ❌ Subscription error. Please verify input and retry.
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </ScrollReveal>
 
                     {/* Dashboard Genre Toggles */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }} id="dashboard_genre_toggles">
@@ -940,14 +949,15 @@ export default function App() {
                         </div>
                       ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
-                          {filteredPosts.map((post) => (
-                            <PostCard
-                              key={post.postId}
-                              post={post}
-                              userLiked={likedPosts[post.postId] || false}
-                              onLikeToggle={handleLikeToggle}
-                              onSelect={(p) => setSelectedPost(p)}
-                            />
+                          {filteredPosts.map((post, index) => (
+                            <ScrollReveal key={post.postId} delay={(index % 4) * 80}>
+                              <PostCard
+                                post={post}
+                                userLiked={likedPosts[post.postId] || false}
+                                onLikeToggle={handleLikeToggle}
+                                onSelect={(p) => setSelectedPost(p)}
+                              />
+                            </ScrollReveal>
                           ))}
                         </div>
                       )}

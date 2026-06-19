@@ -81,7 +81,8 @@ export default function AdminPanel({
     }
     setIsAiLoading(true);
     try {
-      const response = await fetch('/api/ai/suggest', {
+      const apiBase = import.meta.env.VITE_API_BASE || '';
+      const response = await fetch(`${apiBase}/api/ai/suggest`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, category })
@@ -186,7 +187,8 @@ export default function AdminPanel({
 
           if (subscriberEmails.length > 0) {
             console.log(`Dispatched automated notifications for "${title}" to ${subscriberEmails.length} subscribers.`);
-            await fetch('/api/notify', {
+            const apiBase = import.meta.env.VITE_API_BASE || '';
+            await fetch(`${apiBase}/api/notify`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
@@ -718,7 +720,7 @@ export default function AdminPanel({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }} id="existing_lessons_sidebar">
             <div className="card">
               <h3 style={{ fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', color: 'var(--text-main)' }}>
-                Active School Material ({existingPosts.length})
+                Active Academy Material ({existingPosts.length})
               </h3>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '500px', overflowY: 'auto' }} id="lesson_list_scroll">

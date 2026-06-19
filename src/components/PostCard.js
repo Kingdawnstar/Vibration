@@ -190,7 +190,7 @@ export default function PostCard({ post, userLiked, onLikeToggle, onSelect }) {
                 className="btn btn-primary"
                 style={{ gridColumn: 'span 2', fontSize: '0.6875rem' }}
               >
-                {copiedLink ? 'Copied Link ✅' : 'Copy School Link'}
+                {copiedLink ? 'Copied Link ✅' : 'Copy Academy Link'}
               </button>
 
             </div>
