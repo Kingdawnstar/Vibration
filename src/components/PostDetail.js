@@ -1,21 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { db, OperationType, handleFirestoreError } from '../firebase';
+import { db, OperationType, handleFirestoreError } from '../firebase.js';
 import { collection, query, where, onSnapshot, doc, updateDoc, increment, deleteDoc, setDoc } from 'firebase/firestore';
-import { User } from 'firebase/auth';
-import { Post, Comment, MediaAttachment } from '../types';
 import { X, Play, FileText, Image as ImageIcon, Link, ArrowLeft, Heart, MessageSquare, Send, Trash2, Calendar, Share, Share2, ExternalLink } from 'lucide-react';
 
-interface PostDetailProps {
-  post: Post;
-  user: User | null;
-  isAdmin: boolean;
-  userLiked: boolean;
-  onLikeToggle: (postId: string) => void;
-  onClose: () => void;
-}
-
-export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggle, onClose }: PostDetailProps) {
-  const [comments, setComments] = useState<Comment[]>([]);
+export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggle, onClose }) {
+  const [comments, setComments] = useState([]);
   const [newCommentText, setNewCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -28,7 +17,7 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
     return `Check out this awesome guitar lesson: "${post.title}" 🎸 on Vibration Guitar Academy!`;
   };
 
-  const handleShareClick = (platform: 'whatsapp' | 'facebook' | 'twitter' | 'telegram' | 'linkedin' | 'email' | 'copy') => {
+  const handleShareClick = (platform) => {
     const postUrl = getPostUrl();
     const textMsg = `${getShareText()} ${postUrl}`;
 
@@ -58,7 +47,7 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
   };
 
   // Parse YouTube video ID and assemble highly robust embed links
-  const getEmbedUrl = (url: string) => {
+  const getEmbedUrl = (url) => {
     try {
       if (!url) return '';
       if (url.includes('embed/')) return url;
@@ -82,9 +71,9 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
     const q = query(collection(db, comPath), where('postId', '==', post.postId));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items: Comment[] = [];
+      const items = [];
       snapshot.forEach((doc) => {
-        items.push({ ...doc.data() as Comment, commentId: doc.id });
+        items.push({ ...doc.data(), commentId: doc.id });
       });
       // Sort in ascending order of timestamps (oldest first to tell discussion flows)
       items.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -97,7 +86,7 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
   }, [post.postId]);
 
   // Add Comment with custom anti-spam input sizing check
-  const handleAddComment = async (e: React.FormEvent) => {
+  const handleAddComment = async (e) => {
     e.preventDefault();
     if (!user) {
       alert('Please register or log in first to leave comments.');
@@ -114,7 +103,7 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
     try {
       const commentColl = collection(db, commentPath);
       const docRef = doc(commentColl);
-      const payload: Comment = {
+      const payload = {
         commentId: docRef.id,
         postId: post.postId,
         userId: user.uid,
@@ -138,14 +127,14 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
       });
 
       setNewCommentText('');
-    } catch (err: any) {
+    } catch (err) {
       alert('Failed to post comment: ' + err.message);
     } finally {
       setIsSubmittingComment(false);
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
+  const handleDeleteComment = async (commentId) => {
     if (!window.confirm('Delete this comment permanently?')) return;
     const path = `comments/${commentId}`;
     try {
@@ -162,172 +151,154 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
   };
 
   // Simplistic local markdown parser to style markdown text natively in HTML
-  const renderMarkdown = (text: string) => {
+  const renderMarkdown = (text) => {
     return text.split('\n').map((line, idx) => {
       if (line.startsWith('### ')) {
-        return <h4 key={idx} className="mt-5 text-sm font-bold text-zinc-950 uppercase tracking-wide">{line.replace('### ', '')}</h4>;
+        return <h4 key={idx} style={{ marginTop: '1.25rem', marginBottom: '0.5rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{line.replace('### ', '')}</h4>;
       }
       if (line.startsWith('#### ')) {
-        return <h5 key={idx} className="mt-4 text-xs font-bold text-orange-600 uppercase tracking-wider">{line.replace('#### ', '')}</h5>;
+        return <h5 key={idx} style={{ marginTop: '1rem', marginBottom: '0.25rem', fontWeight: 'bold', color: 'var(--primary)' }}>{line.replace('#### ', '')}</h5>;
       }
       if (line.startsWith('## ')) {
-        return <h3 key={idx} className="mt-6 text-base font-bold text-zinc-950">{line.replace('## ', '')}</h3>;
+        return <h3 key={idx} style={{ marginTop: '1.5rem', marginBottom: '0.75rem', fontWeight: 'bold', fontFamily: 'var(--font-serif)', color: 'var(--text-main)' }}>{line.replace('## ', '')}</h3>;
       }
       if (line.startsWith('- ') || line.startsWith('* ')) {
-        return <li key={idx} className="ml-4 list-disc text-xs text-zinc-700 mt-1">{line.substring(2)}</li>;
+        return <li key={idx} style={{ marginLeft: '1rem', listStyleType: 'disc', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>{line.substring(2)}</li>;
       }
       if (line.startsWith('\`\`\`')) {
-        return null; // wrap tab fields cleanly
+        return null;
       }
       // Check for code chords Block
       if (line.trim().startsWith('E|') || line.trim().startsWith('B|') || line.trim().startsWith('G|')) {
         return (
-          <pre key={idx} className="my-1.5 overflow-x-auto rounded-lg bg-zinc-950 px-3 py-1.5 font-mono text-[11px] font-medium leading-relaxed tracking-wider text-orange-400 border border-zinc-800">
+          <pre key={idx} style={{ margin: '0.5rem 0', padding: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-color)', color: 'var(--primary)', borderRadius: '0.5rem', overflowX: 'auto' }}>
             {line}
           </pre>
         );
       }
-      return line.trim() === '' ? <div key={idx} className="h-2" /> : <p key={idx} className="text-xs leading-relaxed text-zinc-600 mt-1.5">{line}</p>;
+      return line.trim() === '' ? <div key={idx} style={{ height: '0.5rem' }} /> : <p key={idx} style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>{line}</p>;
     });
   };
 
   return (
-    <div className="rounded-2xl border border-zinc-100 bg-white shadow-lg overflow-hidden animate-fadeIn" id="post_detail_container">
-      
+    <div className="card" id="post_detail_container" style={{ padding: 0 }}>
       {/* Detail view header with back button */}
-      <div className="flex items-center justify-between border-b border-zinc-100 bg-zinc-50/55 px-4 py-3.5 sm:px-6">
+      <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', padding: '1rem 1.5rem', backgroundColor: 'var(--bg-app)' }}>
         <button
           onClick={onClose}
-          className="flex items-center space-x-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-950"
+          className="btn btn-secondary btn-sm"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Exit Lesson</span>
         </button>
 
-        <span className="font-mono text-[10px] tracking-widest text-orange-600 uppercase font-bold">
+        <span className="badge badge-beginner" style={{ fontWeight: 'bold' }}>
           {post.category}
         </span>
       </div>
 
-      <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-        
+      <div style={{ padding: '1.5rem' }}>
         {/* Core details */}
-        <div>
-          <div className="flex items-center space-x-2 font-mono text-[10px] text-zinc-400">
-            <Calendar className="h-3.5 w-3.5" />
+        <div style={{ marginBottom: '1.5rem' }}>
+          <div className="flex-row" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            <Calendar className="h-4 w-4" />
             <span>Updated {new Date(post.createdAt).toLocaleDateString()}</span>
           </div>
-          <h2 className="mt-3.5 text-xl font-bold tracking-tight text-zinc-950 sm:text-2xl lg:text-3xl">
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.75rem', marginTop: '0.5rem', color: 'var(--text-main)' }}>
             {post.title}
           </h2>
         </div>
 
         {/* Responsive YouTube Player Embed */}
         {embedVideoUrl ? (
-          <div className="overflow-hidden rounded-2xl bg-zinc-950 shadow-md">
-            <div className="aspect-video w-full">
+          <div style={{ borderRadius: '1rem', overflow: 'hidden', backgroundColor: '#000000', marginBottom: '2rem' }}>
+            <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0 }}>
               <iframe
                 title={post.title}
                 src={embedVideoUrl}
                 referrerPolicy="no-referrer"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
-                className="h-full w-full border-0"
+                style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0 }}
               />
             </div>
-            <div className="flex items-center space-x-2 bg-zinc-900 px-4 py-2.5 text-xs text-zinc-400">
-              <Play className="h-3.5 w-3.5 text-orange-500 fill-orange-500/10" />
+            <div className="flex-row" style={{ padding: '0.75rem 1rem', fontSize: '0.75rem', color: '#a1a1aa', backgroundColor: '#18181b' }}>
+              <Play className="h-4 w-4 text-orange-500 fill-orange-500/10" />
               <span>Interactive Premium Academy Masterclass Stream</span>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/50 py-10 text-center">
-            <Play className="h-8 w-8 text-zinc-300" />
-            <p className="mt-2 text-xs font-medium text-zinc-500">Audio lesson content below</p>
+          <div style={{ padding: '3rem', textAlign: 'center', backgroundColor: 'var(--bg-app)', border: '1px dashed var(--border-color)', borderRadius: '1rem', marginBottom: '2rem' }}>
+            <Play className="h-8 w-8 text-zinc-300" style={{ margin: '0 auto' }} />
+            <p style={{ marginTop: '0.5rem', fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Audio lesson content below</p>
           </div>
         )}
 
         {/* Grid: Lesson text and Material downloads */}
-        <div className="grid gap-8 lg:grid-cols-3">
-          
+        <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 992 ? '2fr 1fr' : '1fr', gap: '1.5rem' }}>
           {/* Main Content Area */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="prose prose-sm prose-orange max-w-none">
-              <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm sm:p-6">
-                <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-4">Lesson Core Guide & Tabs</h3>
-                <div className="space-y-1">{renderMarkdown(post.content)}</div>
-              </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="card">
+              <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Lesson Core Guide & Tabs</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>{renderMarkdown(post.content)}</div>
             </div>
           </div>
 
           {/* Practice files column */}
-          <div className="space-y-6">
-            
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Interactive like button + stats counts */}
-            <div className="rounded-2xl bg-orange-50/55 p-5 border border-orange-100/40 space-y-4">
-              <div>
-                <h4 className="text-[11px] font-bold text-orange-850 uppercase tracking-widest">Share & Support Course</h4>
-                <p className="mt-1 text-[11px] text-zinc-500">Love this lesson? Broadcast to WhatsApp groups & other socials!</p>
-              </div>
+            <div className="card" style={{ backgroundColor: 'var(--bg-app)' }}>
+              <h4 style={{ fontSize: '0.75rem', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>Share & Support Course</h4>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Love this lesson? Broadcast to WhatsApp groups & other socials!</p>
 
               <button
                 onClick={() => onLikeToggle(post.postId)}
-                className={`flex w-full items-center justify-center space-x-2 rounded-xl py-3 text-xs font-bold transition-all cursor-pointer ${
-                  userLiked 
-                    ? 'bg-red-650 text-white shadow-md shadow-red-500/20 hover:bg-red-700' 
-                    : 'bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50'
-                }`}
+                className={`btn ${userLiked ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ width: '100%', marginBottom: '1rem' }}
               >
-                <Heart className={`h-4 w-4 ${userLiked ? 'fill-current text-white' : ''}`} />
+                <Heart className={`h-4 w-4 ${userLiked ? 'fill-current' : ''}`} />
                 <span>{userLiked ? 'Lesson Saved' : 'Love Lesson'}</span>
               </button>
 
-              <hr className="border-orange-100/40" />
+              <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '1rem 0' }} />
 
-              <div className="space-y-2">
-                <span className="text-[9px] font-black tracking-widest text-zinc-400 uppercase">Direct Broadcast Shares</span>
-                <div className="grid grid-cols-2 gap-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 'bold' }}>Direct Broadcast Shares</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   <button
                     onClick={() => handleShareClick('whatsapp')}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white py-2 font-bold text-[10px] transition-colors cursor-pointer"
+                    className="btn btn-secondary btn-sm"
+                    style={{ backgroundColor: '#10b981', color: '#ffffff' }}
                   >
                     WhatsApp
                   </button>
                   <button
                     onClick={() => handleShareClick('telegram')}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white py-2 font-bold text-[10px] transition-colors cursor-pointer"
+                    className="btn btn-secondary btn-sm"
+                    style={{ backgroundColor: '#229ed9', color: '#ffffff' }}
                   >
                     Telegram
                   </button>
                   <button
                     onClick={() => handleShareClick('facebook')}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-white py-2 font-bold text-[10px] transition-colors cursor-pointer"
+                    className="btn btn-secondary btn-sm"
+                    style={{ backgroundColor: '#1877f2', color: '#ffffff' }}
                   >
                     Facebook
                   </button>
                   <button
                     onClick={() => handleShareClick('twitter')}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-[#0F0F0F] hover:bg-zinc-800 text-white py-2 font-bold text-[10px] transition-colors cursor-pointer"
+                    className="btn btn-secondary btn-sm"
+                    style={{ backgroundColor: '#000000', color: '#ffffff' }}
                   >
                     Twitter / X
-                  </button>
-                  <button
-                    onClick={() => handleShareClick('linkedin')}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-550 text-white py-2 font-bold text-[10px] transition-colors cursor-pointer animate-fadeIn"
-                  >
-                    LinkedIn
-                  </button>
-                  <button
-                    onClick={() => handleShareClick('email')}
-                    className="flex items-center justify-center gap-1.5 rounded-xl bg-red-650 hover:bg-red-600 text-white py-2 font-bold text-[10px] transition-colors cursor-pointer animate-fadeIn"
-                  >
-                    Email
                   </button>
                 </div>
 
                 <button
                   onClick={() => handleShareClick('copy')}
-                  className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-900 py-2.5 font-bold text-[10px] transition-colors cursor-pointer"
+                  className="btn btn-secondary"
+                  style={{ width: '100%', fontSize: '0.75rem' }}
                 >
                   {copiedLink ? 'Copied Lesson Link ✅' : 'Copy Academy Link'}
                 </button>
@@ -335,12 +306,12 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
             </div>
 
             {/* Downloads Block */}
-            <div className="rounded-2xl border border-zinc-100 bg-white p-5 shadow-sm">
-              <h4 className="text-xs font-bold text-zinc-900 border-b border-zinc-100 pb-3 uppercase tracking-wider">
+            <div className="card">
+              <h4 style={{ fontSize: '0.8125rem', color: 'var(--text-main)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
                 Downloadable Chord Worksheets
               </h4>
               
-              <div className="mt-4 space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {post.media && post.media.length > 0 ? (
                   post.media.map((file, i) => (
                     <a
@@ -348,80 +319,80 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
                       href={file.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-center justify-between rounded-xl border border-zinc-100 bg-zinc-50/30 p-3 hover:bg-orange-50/20 hover:border-orange-200/40"
+                      className="flex-between"
+                      style={{ padding: '0.75rem', borderRadius: '0.75rem', border: '1px solid var(--border-color)', textDecoration: 'none', backgroundColor: 'var(--bg-app)' }}
                     >
-                      <div className="flex items-center space-x-2.5">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-50 text-orange-600">
-                          {file.type === 'pdf' ? (
-                            <FileText className="h-4.5 w-4.5 text-red-500" />
-                          ) : (
-                            <ImageIcon className="h-4.5 w-4.5 text-blue-500" />
-                          )}
-                        </div>
+                      <div className="flex-row">
+                        {file.type === 'pdf' ? (
+                          <FileText className="h-5 w-5" style={{ color: 'var(--red)' }} />
+                        ) : (
+                          <ImageIcon className="h-5 w-5" style={{ color: 'var(--blue)' }} />
+                        )}
                         <div>
-                          <p className="text-xs font-medium text-zinc-800 line-clamp-1 group-hover:text-orange-700">
+                          <p style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-main)' }}>
                             {file.name}
                           </p>
-                          <span className="font-mono text-[9px] text-zinc-400 capitalize">{file.type} download</span>
+                          <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{file.type} download</span>
                         </div>
                       </div>
-                      <ExternalLink className="h-4 w-4 text-zinc-300 group-hover:text-orange-500" />
+                      <ExternalLink className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
                     </a>
                   ))
                 ) : (
-                  <div className="py-4 text-center text-xs text-zinc-400">
-                    No downloadable worksheets added to this lesson nodes.
+                  <div style={{ padding: '1rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    No downloadable worksheets added to this lesson.
                   </div>
                 )}
               </div>
             </div>
-
           </div>
-
         </div>
 
         {/* Discussions Zone */}
-        <div className="border-t border-zinc-100 pt-8" id="discussions_zone">
-          <div className="max-w-2xl">
-            <h3 className="text-base font-bold text-zinc-950 flex items-center space-x-2">
+        <div style={{ borderTop: '1px solid var(--border-color)', marginTop: '2rem', paddingTop: '2rem' }} id="discussions_zone">
+          <div style={{ maxWidth: '640px' }}>
+            <h3 className="flex-row" style={{ fontSize: '1.15rem', color: 'var(--text-main)' }}>
               <MessageSquare className="h-5 w-5 text-orange-600" />
               <span>Lesson Discussions ({comments.length})</span>
             </h3>
 
             {/* List comments */}
-            <div className="mt-6 space-y-4" id="discussions_list">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.5rem' }} id="discussions_list">
               {comments.length === 0 ? (
-                <p className="py-4 text-xs text-zinc-400 italic">No notes posted yet. Be the first to start the discussion!</p>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No notes posted yet. Be the first to start the discussion!</p>
               ) : (
                 comments.map((com) => (
                   <div 
                     key={com.commentId}
-                    className="flex space-x-3 rounded-xl border border-zinc-50/70 bg-zinc-50/30 p-3.5"
+                    className="flex-row"
+                    style={{ alignItems: 'flex-start', padding: '1rem', borderRadius: '1rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-app)' }}
                   >
                     <img
                       src={`https://api.dicebear.com/7.x/initials/svg?seed=${com.userName}`}
-                      className="h-8 w-8 rounded-full bg-zinc-200 border border-zinc-100"
+                      style={{ h: '2rem', w: '2rem', borderRadius: '50%', backgroundColor: 'var(--border-color)' }}
                       alt="avatar"
+                      width="32"
+                      height="32"
                     />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-zinc-800">{com.userName}</span>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono text-[9px] text-zinc-400">
+                    <div style={{ flex: 1, marginLeft: '0.75rem' }}>
+                      <div className="flex-between">
+                        <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{com.userName}</span>
+                        <div className="flex-row" style={{ gap: '0.5rem' }}>
+                          <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'var(--text-muted)' }}>
                             {new Date(com.createdAt).toLocaleDateString()}
                           </span>
                           {(isAdmin || (user && user.uid === com.userId)) && (
                             <button
                               onClick={() => handleDeleteComment(com.commentId)}
-                              className="text-zinc-400 hover:text-red-500"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
                               title="Delete Comment"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </button>
-                          )}
+                           )}
                         </div>
                       </div>
-                      <p className="mt-1 text-xs text-zinc-600 leading-relaxed">{com.text}</p>
+                      <p style={{ marginTop: '0.25rem', fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>{com.text}</p>
                     </div>
                   </div>
                 ))
@@ -430,40 +401,43 @@ export default function PostDetail({ post, user, isAdmin, userLiked, onLikeToggl
 
             {/* Submit comment form */}
             {user ? (
-              <form onSubmit={handleAddComment} className="mt-6 flex items-start space-x-3" id="comment_compose_form">
+              <form onSubmit={handleAddComment} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginTop: '2rem' }} id="comment_compose_form">
                 <img
                   src={user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${user.displayName}`}
-                  className="h-8 w-8 rounded-full border border-zinc-200"
+                  style={{ borderRadius: '50%', border: '1px solid var(--border-color)' }}
                   alt="avatar"
+                  width="32"
+                  height="32"
                 />
-                <div className="flex-1">
+                <div style={{ flex: 1 }}>
                   <textarea
                     rows={2}
                     maxLength={500}
                     placeholder="Enter guitar practice questions or progression thoughts..."
                     value={newCommentText}
                     onChange={(e) => setNewCommentText(e.target.value)}
-                    className="w-full rounded-xl border border-zinc-200 p-3 text-xs text-zinc-800 focus:border-orange-500 focus:outline-none"
+                    className="form-control"
+                    style={{ minHeight: '4.5rem' }}
                     required
                   />
-                  <div className="mt-1.5 flex items-center justify-between">
-                    <span className="font-mono text-[9px] text-zinc-400">
-                      {newCommentText.length}/500 chars (antispam safe)
+                  <div className="flex-between" style={{ marginTop: '0.5rem' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'var(--text-muted)' }}>
+                      {newCommentText.length}/500 chars
                     </span>
                     <button
                       type="submit"
                       disabled={isSubmittingComment}
-                      className="inline-flex items-center space-x-1.5 rounded-lg bg-zinc-950 px-4 py-2 text-xs font-bold text-white hover:bg-zinc-850"
+                      className="btn btn-primary btn-sm"
                     >
-                      <Send className="h-3.5 w-3.5" />
+                      <Send className="h-3 w-3" />
                       <span>Post comment</span>
                     </button>
                   </div>
                 </div>
               </form>
             ) : (
-              <div className="mt-6 rounded-xl bg-zinc-50 p-4 text-center border border-zinc-100">
-                <p className="text-xs text-zinc-500">
+              <div style={{ marginTop: '2rem', padding: '1rem', textAlign: 'center', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', borderRadius: '1rem' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                   Please sign in above to ask questions or discuss notes with academy instructors.
                 </p>
               </div>

@@ -1,19 +1,8 @@
 import { useState, useEffect } from 'react';
-import { auth, googleProvider, db } from '../firebase';
-import { signInWithPopup, signOut, User } from 'firebase/auth';
+import { auth, googleProvider, db } from '../firebase.js';
+import { signInWithPopup, signOut } from 'firebase/auth';
 import { collection, query, where, onSnapshot, updateDoc, doc } from 'firebase/firestore';
 import { LogIn, LogOut, Bell, Shield, BookOpen, Music, Check, Sparkles, Sun, Moon } from 'lucide-react';
-import { NotificationFeed } from '../types';
-
-interface NavbarProps {
-  user: User | null;
-  isAdmin: boolean;
-  onNavigateHome: () => void;
-  onOpenAdmin: () => void;
-  currentView: 'home' | 'admin';
-  isDarkMode: boolean;
-  onToggleDarkMode: () => void;
-}
 
 export default function Navbar({ 
   user, 
@@ -23,8 +12,8 @@ export default function Navbar({
   currentView, 
   isDarkMode, 
   onToggleDarkMode 
-}: NavbarProps) {
-  const [notifications, setNotifications] = useState<NotificationFeed[]>([]);
+}) {
+  const [notifications, setNotifications] = useState([]);
   const [showNotifMenu, setShowNotifMenu] = useState(false);
 
   // Load real-time personal student notifications from Firestore
@@ -38,9 +27,9 @@ export default function Navbar({
     const q = query(collection(db, notifPath), where('userId', '==', user.uid));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const items: NotificationFeed[] = [];
+      const items = [];
       snapshot.forEach((doc) => {
-        items.push({ ...doc.data() as NotificationFeed, notificationId: doc.id });
+        items.push({ ...doc.data(), notificationId: doc.id });
       });
       // Sort by creation date descending
       items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -68,7 +57,7 @@ export default function Navbar({
     }
   };
 
-  const handleMarkAsRead = async (notifId: string) => {
+  const handleMarkAsRead = async (notifId) => {
     try {
       const docRef = doc(db, 'notifications', notifId);
       await updateDoc(docRef, { read: true });
@@ -80,22 +69,18 @@ export default function Navbar({
   const unreadCount = notifications.filter(n => !n.read).length;
 
   return (
-    <header className={`sticky top-0 z-50 w-full border-b backdrop-blur-md transition-colors duration-300 ${
-      isDarkMode 
-        ? 'border-zinc-800 bg-[#0A0A0A]/95 text-zinc-100' 
-        : 'border-zinc-200 bg-white/95 text-zinc-800 shadow-sm'
-    }`} id="main_header">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="navbar-header" id="main_header">
+      <div className="navbar-container app-container flex-between">
         
         {/* Logo and Brand */}
         <div 
           onClick={onNavigateHome}
-          className="group flex cursor-pointer items-center space-x-3.5 transition-opacity hover:opacity-95"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
           id="brand_logo_container"
         >
-          <div className="relative flex h-14 w-12 items-center justify-center text-amber-500">
+          <div style={{ display: 'flex', height: '3.5rem', width: '3rem', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
             <svg 
-              className="h-full w-full transition-transform duration-300 group-hover:scale-110" 
+              style={{ height: '100%', width: '100%' }} 
               viewBox="0 0 100 120" 
               fill="none" 
               xmlns="http://www.w3.org/2000/svg"
@@ -119,7 +104,7 @@ export default function Navbar({
               />
               {/* Soundhole with central vibrance glow */}
               <circle cx="50" cy="78" r="6.5" fill="black" stroke="currentColor" strokeWidth="1.8" />
-              <circle cx="50" cy="78" r="3.5" fill="#f59e0b" className="animate-pulse" />
+              <circle cx="50" cy="78" r="3.5" fill="#f59e0b" />
               {/* Pulse Vibration Waves on right */}
               <path 
                 d="M57 78H62L64 70L67 86L70 63L73 92L76 72L79 81L85 78H94" 
@@ -131,25 +116,26 @@ export default function Navbar({
             </svg>
           </div>
           <div>
-            <h1 className="font-serif text-sm font-bold tracking-[0.25em] text-white uppercase leading-none">
+            <h1 style={{ fontSize: '0.875rem', fontWeight: '850', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-main)', lineHeight: 1 }}>
               Vibration
             </h1>
-            <p className="text-[9px] font-sans font-medium tracking-[0.1em] text-zinc-400 mt-1 uppercase">
+            <p style={{ fontSize: '0.625rem', fontFamily: 'var(--font-sans)', color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.25rem' }}>
               WhatsApp Guitar School
             </p>
           </div>
         </div>
 
         {/* Navigation & Actions */}
-        <div className="flex items-center space-x-4" id="header_actions">
+        <div className="flex-row" id="header_actions">
           
           {/* Theme Mode Toggle Button */}
           <button
             onClick={onToggleDarkMode}
-            className="rounded-full p-2 text-zinc-400 hover:bg-zinc-800/15 dark:hover:bg-zinc-900 hover:text-amber-500 transition-colors focus:outline-none cursor-pointer"
+            className="btn btn-secondary btn-sm"
+            style={{ borderRadius: '50%', padding: '0.5rem', border: 'none', background: 'none' }}
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-            {isDarkMode ? <Sun className="h-5 w-5 text-amber-500 animate-pulse" /> : <Moon className="h-5 w-5 text-zinc-550" />}
+            {isDarkMode ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5" />}
           </button>
           
           {/* Admin shortcut if user is administrator */}
@@ -157,28 +143,25 @@ export default function Navbar({
             <button
               onClick={onOpenAdmin}
               id="admin_view_toggle"
-              className={`flex items-center space-x-1.5 rounded border px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
-                currentView === 'admin' 
-                  ? 'bg-amber-500 border-amber-500 text-black' 
-                  : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800'
-              }`}
+              className={`btn btn-sm ${currentView === 'admin' ? 'btn-primary' : 'btn-secondary'}`}
             >
-              <Shield className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Instructor Hub</span>
+              <Shield className="h-4 w-4" />
+              <span>Instructor Hub</span>
             </button>
           )}
 
           {/* Student Notifications Bell */}
           {user && (
-            <div className="relative">
+            <div style={{ position: 'relative' }}>
               <button
                 onClick={() => setShowNotifMenu(!showNotifMenu)}
                 id="bell_notification_button"
-                className="relative rounded-full p-2 text-zinc-400 hover:bg-zinc-900 hover:text-white focus:outline-none"
+                className="btn btn-secondary btn-sm"
+                style={{ borderRadius: '50%', padding: '0.5rem', background: 'none', border: 'none', position: 'relative' }}
               >
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-extrabold text-black ring-2 ring-[#0A0A0A]">
+                  <span style={{ position: 'absolute', top: 0, right: 0, display: 'flex', height: '1rem', width: '1rem', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#ffffff', fontSize: '0.625rem', fontWeight: 'bold' }}>
                     {unreadCount}
                   </span>
                 )}
@@ -188,16 +171,17 @@ export default function Navbar({
               {showNotifMenu && (
                 <div 
                   id="notifications_dropdown"
-                  className="absolute right-0 mt-2.5 w-80 rounded border border-zinc-800 bg-[#0F0F0F] p-2 shadow-2xl ring-1 ring-black/50 z-50 animate-fadeIn"
+                  style={{ position: 'absolute', right: 0, marginTop: '0.5rem', width: '20rem', borderRadius: '1rem', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', padding: '1rem', boxShadow: 'var(--shadow-lg)', zIndex: 1000 }}
+                  className="animate-fade"
                 >
-                  <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
-                    <span className="text-xs font-bold text-zinc-200 uppercase tracking-widest">Student Bulletins</span>
-                    <span className="font-mono text-[9px] text-amber-500">Real-time</span>
+                  <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--text-main)' }}>Student Bulletins</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'var(--primary)' }}>Real-time</span>
                   </div>
                   
-                  <div className="max-h-64 overflow-y-auto" id="notification_list_container">
+                  <div style={{ maxHeight: '16rem', overflowY: 'auto' }} id="notification_list_container">
                     {notifications.length === 0 ? (
-                      <div className="py-6 text-center text-xs text-zinc-500">
+                      <div style={{ padding: '1.5rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         No announcements posted yet
                       </div>
                     ) : (
@@ -205,25 +189,23 @@ export default function Navbar({
                         <div 
                            key={notif.notificationId}
                            onClick={() => handleMarkAsRead(notif.notificationId)}
-                           className={`group cursor-pointer rounded p-2.5 transition-colors hover:bg-zinc-900 ${
-                             !notif.read ? 'bg-amber-500/5' : ''
-                           }`}
+                           style={{ padding: '0.5rem', borderRadius: '0.5rem', cursor: 'pointer', backgroundColor: !notif.read ? 'rgba(255, 90, 31, 0.05)' : 'transparent', marginBottom: '0.25rem' }}
                         >
-                          <div className="flex items-start justify-between space-x-1.5">
+                          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.5rem' }}>
                             <div>
-                              <p className={`text-xs ${!notif.read ? 'font-bold text-amber-400' : 'text-zinc-300'}`}>
+                              <p style={{ fontSize: '0.75rem', fontWeight: !notif.read ? 'bold' : 'normal', color: !notif.read ? 'var(--primary)' : 'var(--text-main)' }}>
                                 {notif.title}
                               </p>
-                              <p className="mt-0.5 text-[11px] text-zinc-400 line-clamp-2">
+                              <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.125rem' }}>
                                 {notif.message}
                               </p>
-                              <span className="mt-1 block font-mono text-[9px] text-zinc-500">
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'var(--text-muted)', marginTop: '0.25rem', display: 'block' }}>
                                 {new Date(notif.createdAt).toLocaleDateString()}
                               </span>
                             </div>
                             {!notif.read && (
                               <button 
-                                className="flex h-5 w-5 items-center justify-center rounded bg-amber-500 text-black opacity-0 transition-opacity group-hover:opacity-100"
+                                style={{ background: 'none', border: 'none', display: 'flex', height: '1.25rem', width: '1.25rem', alignItems: 'center', justifyContent: 'center', borderRadius: '0.25rem', backgroundColor: 'var(--primary)', color: '#ffffff' }}
                                 title="Mark as read"
                               >
                                 <Check className="h-3 w-3" />
@@ -241,33 +223,34 @@ export default function Navbar({
 
           {/* User auth state profile container */}
           {user ? (
-            <div className="flex items-center space-x-3 border-l border-zinc-800 pl-3">
-              <div className="hidden flex-col text-right sm:flex">
-                <span className="text-xs font-bold text-zinc-105 line-clamp-1">{user.displayName}</span>
-                <span className="font-mono text-[9px] text-amber-500 uppercase tracking-tighter">
+            <div className="flex-row" style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-main)' }}>{user.displayName}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'var(--primary)', textTransform: 'uppercase' }}>
                   {isAdmin ? 'Elite Instructor' : 'Academy Student'}
                 </span>
               </div>
               <img 
                 src={user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${user.displayName}`}
                 referrerPolicy="no-referrer"
-                className="h-8 w-8 rounded-full border border-zinc-705"
+                style={{ height: '2rem', width: '2rem', borderRadius: '50%', border: '1px solid var(--border-color)' }}
                 alt="profile avatar"
               />
               <button
                 onClick={handleLogout}
                 id="logout_action_button"
-                className="rounded p-1.5 text-zinc-500 hover:bg-zinc-900 hover:text-red-400 transition-colors"
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '0.375rem', background: 'none', border: 'none' }}
                 title="Log Out"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-4 w-4" style={{ color: 'var(--red)' }} />
               </button>
             </div>
           ) : (
             <button
               onClick={handleLogin}
               id="sign_in_trigger"
-              className="flex items-center space-x-2 rounded bg-amber-500 px-4 py-2 text-xs font-bold text-black uppercase tracking-widest transition-all hover:bg-amber-400 focus:outline-none"
+              className="btn btn-primary btn-sm"
             >
               <LogIn className="h-4 w-4" />
               <span>Sign-In</span>

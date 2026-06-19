@@ -1,25 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { auth, db, OperationType, handleFirestoreError } from './firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { collection, query, onSnapshot, doc, getDoc, getDocs, setDoc, deleteDoc, updateDoc, increment, addDoc } from 'firebase/firestore';
+import { auth, db, OperationType, handleFirestoreError } from './firebase.js';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, query, onSnapshot, doc, getDoc, setDoc, deleteDoc, updateDoc, increment } from 'firebase/firestore';
 import { 
   Music, BookOpen, Search, Filter, ShieldAlert, Sparkles, CheckSquare, 
   HelpCircle, ChevronRight, UserCheck, Star, PlayCircle, Mail, Bell, Check,
   Layers, MessageSquare
 } from 'lucide-react';
-import Navbar from './components/Navbar';
-import PostCard from './components/PostCard';
-import PostDetail from './components/PostDetail';
-import AdminPanel from './components/AdminPanel';
-import { Post, Review, CurriculumItem } from './types';
+import Navbar from './components/Navbar.js';
+import PostCard from './components/PostCard.js';
+import PostDetail from './components/PostDetail.js';
+import AdminPanel from './components/AdminPanel.js';
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [view, setView] = useState<'home' | 'admin'>('home');
+  const [view, setView] = useState('home');
 
   // Light / Dark Mode theme state
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+  const [isDarkMode, setIsDarkMode] = useState(() => {
     const saved = localStorage.getItem('theme-mode');
     return saved ? saved === 'dark' : true; // Default to true (polished dark/amber theme)
   });
@@ -35,27 +34,27 @@ export default function App() {
   }, [isDarkMode]);
 
   // Lessons content states
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [posts, setPosts] = useState([]);
+  const [selectedPost, setSelectedPost] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedType, setSelectedType] = useState<'all' | 'lesson' | 'video' | 'blog'>('all');
+  const [selectedType, setSelectedType] = useState('all');
 
   // New modules: Student Reviews & Curriculum structured items
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [curriculum, setCurriculum] = useState<CurriculumItem[]>([]);
+  const [reviews, setReviews] = useState([]);
+  const [curriculum, setCurriculum] = useState([]);
 
-  // User likes tracking state (dictionary where keys are postIds and values are booleans)
-  const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
+  // User likes tracking state
+  const [likedPosts, setLikedPosts] = useState({});
 
   // Auth synchronization loader state
   const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Subscriber panel states
   const [subscriberEmail, setSubscriberEmail] = useState('');
-  const [subscribingStatus, setSubscribingStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [subscribingStatus, setSubscribingStatus] = useState('idle');
 
-  const handleSubscribe = async (e: React.FormEvent) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!subscriberEmail || !subscriberEmail.includes('@')) return;
     setSubscribingStatus('loading');
@@ -74,7 +73,7 @@ export default function App() {
       setTimeout(() => {
         setSubscribingStatus('idle');
       }, 5000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Newsletter enrollment error:', err);
       setSubscribingStatus('error');
     }
@@ -83,12 +82,12 @@ export default function App() {
   // States for student submitting dynamic review on the frontpage
   const [showWriteReview, setShowWriteReview] = useState(false);
   const [studentRating, setStudentRating] = useState(5);
-  const [studentLevel, setStudentLevel] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
+  const [studentLevel, setStudentLevel] = useState('Beginner');
   const [studentComment, setStudentComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [reviewFeedback, setReviewFeedback] = useState<string | null>(null);
+  const [reviewFeedback, setReviewFeedback] = useState(null);
 
-  const handlePublishStudentReview = async (e: React.FormEvent) => {
+  const handlePublishStudentReview = async (e) => {
     e.preventDefault();
     if (!studentComment || studentComment.trim().length === 0) {
       alert('Review comment text is required.');
@@ -120,7 +119,7 @@ export default function App() {
       setReviewFeedback('Thank you! Your verified student rating was successfully published live!');
       setTimeout(() => setReviewFeedback(null), 8000);
       setShowWriteReview(false);
-    } catch (err: any) {
+    } catch (err) {
       handleFirestoreError(err, OperationType.CREATE, reviewsPath);
     } finally {
       setIsSubmittingReview(false);
@@ -146,7 +145,7 @@ export default function App() {
         const isUserAdmin = currentUser.email?.toLowerCase() === adminEmail.toLowerCase();
         setIsAdmin(isUserAdmin);
 
-        // Auto-register profile in Firestore of the guitar academy student group (if not exists yet)
+        // Auto-register profile in Firestore
         const userRef = doc(db, 'users', currentUser.uid);
         try {
           const userSnap = await getDoc(userRef);
@@ -182,15 +181,15 @@ export default function App() {
     const q = collection(db, postPath);
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const items: Post[] = [];
+      const items = [];
       snapshot.forEach((doc) => {
-        items.push({ ...doc.data() as Post, postId: doc.id });
+        items.push({ ...doc.data(), postId: doc.id });
       });
 
       // Sort by creation date descending (latest lesson nodes first)
       items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      // If database is initially empty, seed 3 beautiful starter lessons automatically so the app is populated out of the box!
+      // If database is initially empty, seed 3 beautiful starter lessons automatically
       if (items.length === 0) {
         console.log('No posts found. Seeding base guitar lessons database nodes...');
         await seedStarterLessons();
@@ -213,9 +212,9 @@ export default function App() {
   // Listen for Student Reviews testimonials dynamically
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'reviews'), (snapshot) => {
-      const items: Review[] = [];
+      const items = [];
       snapshot.forEach((doc) => {
-        items.push({ ...doc.data() as Review, reviewId: doc.id });
+        items.push({ ...doc.data(), reviewId: doc.id });
       });
       items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setReviews(items);
@@ -228,14 +227,14 @@ export default function App() {
   // Listen for Curriculum Items list dynamically
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'curriculum'), (snapshot) => {
-      const items: CurriculumItem[] = [];
+      const items = [];
       snapshot.forEach((doc) => {
-        items.push({ ...doc.data() as CurriculumItem, itemId: doc.id });
+        items.push({ ...doc.data(), itemId: doc.id });
       });
       items.sort((a, b) => {
         const levelOrder = { 'Beginner': 0, 'Intermediate': 1, 'Advanced': 2 };
-        const aL = levelOrder[a.level as keyof typeof levelOrder] ?? 0;
-        const bL = levelOrder[b.level as keyof typeof levelOrder] ?? 0;
+        const aL = levelOrder[a.level] ?? 0;
+        const bL = levelOrder[b.level] ?? 0;
         if (aL !== bL) return aL - bL;
         return a.order - b.order;
       });
@@ -257,7 +256,7 @@ export default function App() {
     const q = collection(db, likesPath);
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const userLikesMap: Record<string, boolean> = {};
+      const userLikesMap = {};
       snapshot.forEach((doc) => {
         const data = doc.data();
         if (data.userId === user.uid) {
@@ -272,7 +271,7 @@ export default function App() {
     return () => unsubscribe();
   }, [user, posts]);
 
-  // Seeding high-quality default masterclasses to prevent empty landing page
+  // Seeding default masterclasses
   const seedStarterLessons = async () => {
     const samples = [
       {
@@ -296,7 +295,7 @@ export default function App() {
             type: 'image'
           }
         ],
-        createdAt: new Date(Date.now() - 3600000 * 2).toISOString() // 2 hours ago
+        createdAt: new Date(Date.now() - 3600000 * 2).toISOString()
       },
       {
         title: '🙏 Gospel Guitar Chord Substitution & Grace Progression Tips',
@@ -314,7 +313,7 @@ export default function App() {
             type: 'pdf'
           }
         ],
-        createdAt: new Date(Date.now() - 3600000 * 24).toISOString() // 24 hours ago
+        createdAt: new Date(Date.now() - 3600000 * 24).toISOString()
       },
       {
         title: '⚡ Mastering The Pentatonic Solo Scale with Speed Patterns',
@@ -332,7 +331,7 @@ export default function App() {
             type: 'pdf'
           }
         ],
-        createdAt: new Date(Date.now() - 3600000 * 48).toISOString() // 48 hours ago
+        createdAt: new Date(Date.now() - 3600000 * 48).toISOString()
       }
     ];
 
@@ -371,7 +370,7 @@ export default function App() {
           rating: 5,
           proficientLevel: 'Advanced',
           comment: 'The 7-3-6 gospel substitution lessons and downloadables are top-notch. Truly owned my vibration here.',
-          createdAt: new Date(Date.now() - 7200000).toISOString()
+          createdAt: new Date(Date.now() - 7200020).toISOString()
         }
       ];
       for (const r of reviewSamples) {
@@ -440,8 +439,7 @@ export default function App() {
     }
   };
 
-  // 4. Handle Like Toggle Event with Zero-Trust Security Checking
-  const handleLikeToggle = async (postId: string) => {
+  const handleLikeToggle = async (postId) => {
     if (!user) {
       alert('Please register or sign in using Google login to like academy lessons.');
       return;
@@ -461,13 +459,13 @@ export default function App() {
 
     try {
       if (isCurrentlyLiked) {
-        // Unlike - Delete record and decrement post likesCount synchronously
+        // Unlike
         await deleteDoc(likeRef);
         await updateDoc(postRef, {
           likesCount: increment(-1)
         });
       } else {
-        // Like - Add model record and increment post likesCount
+        // Like
         await setDoc(likeRef, {
           likeId,
           postId,
@@ -478,8 +476,8 @@ export default function App() {
           likesCount: increment(1)
         });
       }
-    } catch (err: any) {
-      // Revert UI if rules rejected the write operation
+    } catch (err) {
+      // Revert UI on failure
       setLikedPosts(prev => ({
         ...prev,
         [postId]: isCurrentlyLiked
@@ -491,18 +489,16 @@ export default function App() {
   // Filter & Search implementation
   const filteredPosts = posts.filter((post) => {
     const matchesCategory = selectedCategory === 'All' || post.category === selectedCategory;
-    const postType = post.type || (post.videoUrl ? 'video' : 'lesson');
-    const matchesType = selectedType === 'all' || postType === selectedType;
+    const pType = post.type || (post.videoUrl ? 'video' : 'lesson');
+    const matchesType = selectedType === 'all' || pType === selectedType;
     const matchesSearch = 
       post.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      post.content.toLowerCase().includes(searchQuery.toLowerCase());
+      (post.content || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesType && matchesSearch;
   });
 
   return (
-    <div className={`min-h-screen font-sans antialiased selection:bg-amber-500 selection:text-black transition-colors duration-300 ${
-      isDarkMode ? 'bg-[#0A0A0A] text-zinc-150' : 'bg-zinc-50 text-zinc-800'
-    }`} id="main_app_wrapper">
+    <div className={`app-wrapper ${isDarkMode ? 'dark' : 'light'}`} id="main_app_wrapper">
       
       {/* Premium Header/Nav */}
       <Navbar 
@@ -516,36 +512,45 @@ export default function App() {
       />
 
       {/* Main Core Area limits */}
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" id="primary_page_container">
+      <div className="app-container" style={{ padding: '2rem 1rem' }} id="primary_page_container">
         
-        <div className="lg:grid lg:grid-cols-4 lg:gap-8">
+        <div style={{ display: 'grid', gridTemplateColumns: (view === 'home' && !selectedPost && window.innerWidth > 992) ? '1fr 3fr' : '1fr', gap: '2rem' }}>
           
           {/* Left Sidebar Curriculum list - matching Editorial Aesthetic design mock layout */}
           {view === 'home' && !selectedPost && (
-            <aside className="hidden lg:block lg:col-span-1 space-y-6" id="editorial_curriculum_sidebar">
-              <div className={`rounded-2xl border p-6 space-y-8 sticky top-28 transition-colors duration-300 ${
-                isDarkMode 
-                  ? 'border-zinc-805 bg-[#0F0F0F] text-zinc-100' 
-                  : 'border-zinc-200 bg-white shadow-sm text-zinc-800'
-              }`}>
+            <aside id="editorial_curriculum_sidebar">
+              <div className="card sticky-sidebar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <h3 className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-5 font-bold">Curriculum</h3>
-                  <ul className="space-y-4 text-xs font-semibold">
+                  <h3 style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.2rem', color: 'var(--text-muted)', marginBottom: '1rem', fontWeight: 'bold' }}>Curriculum</h3>
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: 0, margin: 0 }}>
                     {categories.map((cat) => {
                       const isActive = selectedCategory === cat;
                       return (
                         <li key={cat}>
                           <button
                             onClick={() => setSelectedCategory(cat)}
-                            className={`flex items-center gap-3 transition-colors text-left w-full ${
-                              isActive 
-                                ? 'text-amber-500 font-bold' 
-                                : isDarkMode ? 'text-zinc-400 hover:text-white' : 'text-zinc-600 hover:text-zinc-950'
-                            }`}
+                            className="btn"
+                            style={{
+                              width: '100%',
+                              textAlign: 'left',
+                              color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+                              fontWeight: isActive ? 'bold' : 'normal',
+                              padding: '0.25rem 0',
+                              background: 'none',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.5rem'
+                            }}
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full transition-all ${
-                              isActive ? 'bg-amber-500 scale-125' : 'bg-transparent border border-zinc-700 dark:border-zinc-500'
-                            }`} />
+                            <span style={{
+                              display: 'inline-block',
+                              width: '0.375rem',
+                              height: '0.375rem',
+                              borderRadius: '50%',
+                              backgroundColor: isActive ? 'var(--primary)' : 'transparent',
+                              border: '1px solid var(--border-color)'
+                            }} />
                             {cat}
                           </button>
                         </li>
@@ -554,42 +559,35 @@ export default function App() {
                   </ul>
                 </div>
 
-                 <div className={`border-t pt-6 ${isDarkMode ? 'border-zinc-800' : 'border-zinc-200'}`}>
-                  <h3 className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-4 font-bold">Interactive Syllabus</h3>
-                  <div className="space-y-4">
+                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                  <h3 style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.15rem', color: 'var(--text-muted)', marginBottom: '0.75rem', fontWeight: 'bold' }}>interactive Syllabus</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
                       const levelItems = curriculum.filter(i => i.level === level);
                       return (
-                        <div key={level} className="space-y-2">
-                          <span className={`text-[8px] font-mono font-black uppercase tracking-widest px-2 py-0.5 rounded ${
-                            level === 'Beginner' ? 'bg-emerald-950/60 text-emerald-400' :
-                            level === 'Intermediate' ? 'bg-blue-950/60 text-blue-400' :
-                            'bg-red-950/60 text-red-400'
-                          }`}>
+                        <div key={level} style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                          <span className="badge badge-beginner" style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '0.625rem', fontWeight: 'bold' }}>
                             {level}
                           </span>
                           {levelItems.length === 0 ? (
-                            <p className="text-[10px] text-zinc-600 italic pl-2">Syllabus outline pending...</p>
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '0.5rem' }}>Syllabus updates pending...</p>
                           ) : (
-                            <ul className="space-y-2 pl-1.5 border-l border-zinc-800">
+                            <ul style={{ listStyle: 'none', paddingLeft: '0.5rem', borderLeft: '1px solid var(--border-color)', margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                               {levelItems.map((item) => (
-                                <li key={item.itemId} className="text-[11px] leading-tight group">
+                                <li key={item.itemId} style={{ fontSize: '0.6875rem' }}>
                                   {item.postId ? (
                                     <button
                                       onClick={() => {
                                         const p = posts.find(post => post.postId === item.postId);
                                         if (p) setSelectedPost(p);
                                       }}
-                                      className="text-zinc-400 hover:text-amber-400 text-left transition-colors font-medium flex items-start gap-1 w-full"
+                                      style={{ display: 'inline-block', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
                                     >
-                                      <span className="text-amber-500 text-[10px] shrink-0 mt-0.5">⚡</span>
-                                      <span>
-                                        <strong className="text-zinc-200 group-hover:text-amber-400">{item.title}</strong>
-                                      </span>
+                                      <strong style={{ color: 'var(--primary)' }}>⚡ {item.title}</strong>
                                     </button>
                                   ) : (
-                                    <div className="text-zinc-500">
-                                      <strong className="text-zinc-400">{item.title}</strong>: {item.description}
+                                    <div style={{ color: 'var(--text-muted)' }}>
+                                      <strong style={{ color: 'var(--text-main)' }}>{item.title}</strong>
                                     </div>
                                   )}
                                 </li>
@@ -603,53 +601,53 @@ export default function App() {
                 </div>
 
                 {/* Left Sidebar newsletter alert box */}
-                <div className="border-t border-zinc-800 pt-6">
-                  <h3 className="text-[10px] uppercase tracking-[0.25em] text-zinc-500 mb-4 font-bold flex items-center gap-1.5">
-                    <Bell className="h-3.5 w-3.5 text-amber-500" /> New Post Alerts
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                  <h3 style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.15rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                    <Bell className="h-4 w-4 text-amber-500" /> Lesson Alerts
                   </h3>
-                  <p className="text-[11px] text-zinc-500 leading-normal mb-3">Enlist your email to receive broadcast alerts whenever the owner posts.</p>
-                  <form onSubmit={handleSubscribe} className="space-y-2">
+                  <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', lineHeight: '1.4', marginBottom: '0.75rem' }}>Subscribe to get alerts as soon as I post new materials!</p>
+                  <form onSubmit={handleSubscribe} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <input
                       type="email"
                       required
                       value={subscriberEmail}
                       onChange={(e) => setSubscriberEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-[11px] text-white placeholder-zinc-650 focus:border-amber-500 focus:outline-none transition-colors"
+                      placeholder="your.email@example.com"
+                      className="form-control"
+                      style={{ fontSize: '0.75rem', padding: '0.5rem' }}
                     />
                     <button
                       type="submit"
                       disabled={subscribingStatus === 'loading'}
-                      className="w-full bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-[10px] py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      className="btn btn-primary"
+                      style={{ width: '100%', fontSize: '0.75rem', padding: '0.5rem' }}
                     >
-                      {subscribingStatus === 'loading' ? 'Enrolling...' : 'Join Broadcast List'}
+                      {subscribingStatus === 'loading' ? 'Subscribing...' : 'Join Classroom'}
                     </button>
                   </form>
                   {subscribingStatus === 'success' && (
-                    <p className="text-amber-500 font-mono text-[9px] mt-2 uppercase tracking-wider flex items-center gap-1 leading-none animate-fadeIn">
+                    <p style={{ color: 'var(--emerald)', fontFamily: 'var(--font-mono)', fontSize: '0.625rem', marginTop: '0.5rem', textTransform: 'uppercase' }}>
                       ✓ Successfully enlisted!
                     </p>
                   )}
                   {subscribingStatus === 'error' && (
-                    <p className="text-red-500 font-mono text-[9px] mt-2 uppercase tracking-wider flex items-center gap-1 leading-none animate-fadeIn">
-                      ✗ Enlist error. Retry.
+                    <p style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: '0.625rem', marginTop: '0.5rem', textTransform: 'uppercase' }}>
+                      ✗ Error. Try again.
                     </p>
                   )}
                 </div>
 
                 {user && (
-                  <div className="border-t border-zinc-800 pt-6 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full overflow-hidden border border-zinc-705 bg-zinc-800 flex-shrink-0">
-                      <img 
-                        src={user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${user.displayName}`} 
-                        alt="Profile avatar" 
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="text-[11px] overflow-hidden">
-                      <p className="font-bold text-zinc-200 line-clamp-1 truncate">{user.displayName}</p>
-                      <p className="text-amber-500 font-mono tracking-wider uppercase text-[9px]">{isAdmin ? 'Academy Editor' : 'Student Pro'}</p>
+                  <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <img 
+                      src={user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${user.displayName}`} 
+                      alt="Profile avatar" 
+                      referrerPolicy="no-referrer"
+                      style={{ width: '2rem', height: '2rem', borderRadius: '50%', border: '1px solid var(--border-color)' }}
+                    />
+                    <div style={{ overflow: 'hidden' }}>
+                      <p style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-main)', margin: 0 }}>{user.displayName}</p>
+                      <p style={{ color: 'var(--primary)', fontFamily: 'var(--font-mono)', fontSize: '0.625rem', textTransform: 'uppercase', margin: 0 }}>{isAdmin ? 'Instructor' : 'Verified Student'}</p>
                     </div>
                   </div>
                 )}
@@ -658,20 +656,20 @@ export default function App() {
           )}
 
           {/* Core main timeline section */}
-          <main className={`col-span-1 ${view === 'home' && !selectedPost ? 'lg:col-span-3' : 'lg:col-span-4'} space-y-8`}>
+          <main style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             {view === 'admin' ? (
-              /* Instructor publishing portal admin layout */
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+              /* Instructor portal admin layout */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
-                    <h2 className="text-2xl font-serif italic font-light tracking-tight text-white mb-1">
+                    <h2 style={{ fontSize: '1.5rem', fontFamily: 'var(--font-serif)', color: 'var(--text-main)' }}>
                       Instructor Hub Console
                     </h2>
-                    <p className="text-xs text-zinc-500 font-mono uppercase tracking-wide">Add materials, edit lesson flows, and dispatch student emails.</p>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>Add materials, edit lesson flows, and notify students instantly.</p>
                   </div>
                   <button
                     onClick={() => setView('home')}
-                    className="rounded border border-zinc-800 bg-zinc-900 px-4 py-2 text-xs font-bold uppercase tracking-widest text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                    className="btn btn-secondary"
                   >
                     Exit Console
                   </button>
@@ -686,10 +684,9 @@ export default function App() {
                 />
               </div>
             ) : (
-              /* Student home layout explore dashboard */
-              <div className="space-y-8" id="student_home_timeline">
+              /* Student home explore dashboard */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }} id="student_home_timeline">
                 
-                {/* Conditional Detailed single post page */}
                 {selectedPost ? (
                   <PostDetail 
                     post={selectedPost} 
@@ -701,182 +698,174 @@ export default function App() {
                   />
                 ) : (
                   <>
-                    {/* Stunning Hero branding header */}
+                    {/* Hero branding header */}
                     <div 
-                      className="relative overflow-hidden rounded-3xl bg-zinc-900 px-6 py-12 text-white border border-zinc-800/80 shadow-2xl sm:px-12 sm:py-16 md:px-16"
+                      className="hero-section"
                       id="academy_hero_billboard"
                     >
-                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1550985616-10810253b84d?q=80&w=2000')] bg-cover bg-center opacity-45"></div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/35 to-transparent" />
-                      
-                      <div className="relative max-w-2xl">
-                        <div className="flex gap-2 mb-4">
-                          <span className="px-2 py-0.5 bg-amber-500 text-black text-[9px] font-black uppercase tracking-widest rounded-sm">
+                      <div className="relative" style={{ zIndex: 2, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <span className="badge badge-beginner" style={{ padding: '0.25rem 0.5rem', fontSize: '0.625rem', fontWeight: 'bold' }}>
                             VIBRATION PREMIUM
                           </span>
-                          <span className="px-2 py-0.5 bg-zinc-100 text-black text-[9px] font-black uppercase tracking-widest rounded-sm">
+                          <span className="badge badge-advanced" style={{ padding: '0.25rem 0.5rem', fontSize: '0.625rem', fontWeight: 'bold' }}>
                             GUITAR STUDIO
                           </span>
                         </div>
 
-                        <h2 className="text-4xl font-serif font-light leading-none mb-3 italic tracking-tight sm:text-5xl md:text-6xl">
+                        <h2 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-serif)', fontWeight: 'bold', color: '#ffffff', margin: 0, lineHeight: 1.1 }}>
                           Vibration Guitar Academy
                         </h2>
                         
-                        <p className="font-serif italic text-amber-400 text-sm sm:text-base mb-4 tracking-wide font-light">
+                        <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', color: 'var(--primary)', fontSize: '1rem', margin: 0 }}>
                           "Feel the strings, find your sound and own your vibration"
                         </p>
                         
-                        <p className="mt-2 text-zinc-300 text-sm leading-relaxed max-w-sm">
-                          Master smooth Afrobeat triads, gospel chord substitution templates, and minor solo layouts with instant downloadables and WhatsApp group connectivity.
+                        <p style={{ margin: 0, textShadow: '0 2px 4px rgba(0,0,0,0.8)', fontSize: '0.8125rem', color: '#e4e4e7', maxWidth: '400px', lineHeight: 1.5 }}>
+                          Master smooth rhythm, soulful chord projections, and scales with premium files downloadables and WhatsApp companion tools.
                         </p>
 
-                        <div className="mt-8 flex flex-wrap gap-4 text-[10px] font-mono">
-                          <div className="flex items-center space-x-2 rounded bg-black/60 px-3.5 py-1.5 border border-zinc-800 backdrop-blur-sm">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            <span className="text-zinc-300 uppercase tracking-widest">{posts.length}+ active masterclasses</span>
+                        <div className="flex-row" style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.625rem', fontFamily: 'var(--font-mono)' }}>
+                          <div style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(0, 0, 0, 0.65)', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <span className="pulse-indicator" style={{ height: '0.5rem', width: '0.5rem', borderRadius: '50%', backgroundColor: 'var(--primary)' }} />
+                            <span>{posts.length}+ lesson modules</span>
                           </div>
-                          <div className="flex items-center space-x-2 rounded bg-black/60 px-3.5 py-1.5 border border-zinc-800 backdrop-blur-sm">
-                            <Star className="h-3 w-3 text-amber-500 fill-amber-500/10" />
-                            <span className="text-zinc-300 uppercase tracking-widest">1-Click Google Access</span>
+                          <div style={{ padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(0, 0, 0, 0.65)', border: '1px solid var(--border-color)' }}>
+                            <span>Verified Students Access</span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* VIP Student Notification Desk Form */}
+                    {/* VIP Student Alert Desk Form */}
                     <div 
-                      className="rounded-3xl border border-zinc-800 bg-[#0F0F0F]/80 p-6 md:p-8 relative overflow-hidden"
+                      className="card"
                       id="student_newsletter_signup"
+                      style={{ padding: '1.5rem', border: '1px solid var(--border-color)' }}
                     >
-                      <div className="absolute top-0 right-0 p-8 opacity-[0.03] text-amber-500 hidden md:block select-none pointer-events-none">
-                        <Mail className="h-44 w-44" />
-                      </div>
-                      <div className="max-w-xl">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 text-amber-400 text-[10px] uppercase font-bold tracking-widest">
-                          <Bell className="h-3 w-3 text-amber-500 animate-bounce" /> Broadcast Alerts Desk
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <span className="badge badge-beginner animate-fade" style={{ display: 'inline-flex', alignSelf: 'flex-start', fontSize: '0.625rem', fontWeight: 'bold' }}>
+                          📨 Announcements alerts desk
                         </span>
-                        <h3 className="text-lg font-serif italic text-white mt-3">
-                          Never miss a chord substitution template
+                        <h3 style={{ fontSize: '1.125rem', fontFamily: 'var(--font-serif)', color: 'var(--text-main)', margin: 0 }}>
+                          Instant classroom broadcast alerts
                         </h3>
-                        <p className="text-zinc-400 text-xs mt-2 leading-relaxed">
-                          Enter your email to join our newsletter list. Every time the academy instructor publishes new tutorials, videos, tabs or blog guides, you will receive an automatic email notification broadcast!
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: '1.5' }}>
+                          Add your email to receive automatic live notifications directly. Whenever the academy instructor publishes new tutorials, chord sheets, progression tabs or blog notes, we broadcast standard email updates!
                         </p>
                         
-                        <form onSubmit={handleSubscribe} className="mt-5 flex flex-col sm:flex-row gap-2.5 max-w-md">
+                        <form onSubmit={handleSubscribe} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                           <input
                             type="email"
                             required
                             value={subscriberEmail}
                             onChange={(e) => setSubscriberEmail(e.target.value)}
                             placeholder="your.email@example.com"
-                            className="flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-xs text-white placeholder-zinc-600 focus:border-amber-500 focus:outline-none transition-colors"
+                            className="form-control"
+                            style={{ flex: 1, minWidth: '150px' }}
                           />
                           <button
                             type="submit"
                             disabled={subscribingStatus === 'loading'}
-                            className="bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs py-2.5 px-5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="btn btn-primary"
                           >
-                            {subscribingStatus === 'loading' ? (
-                              'Enlisting...'
-                            ) : (
-                              <>
-                                <Check className="h-3.5 w-3.5" /> Enlist in Alerts
-                              </>
-                            )}
+                            <span>Join Classroom Alerts list</span>
                           </button>
                         </form>
                         
                         {subscribingStatus === 'success' && (
-                          <p className="text-amber-500 font-mono text-[10px] mt-3 uppercase tracking-wider flex items-center gap-1.5 animate-fadeIn">
-                            ✨ Enlist success! You will now receive automatic post broadcasts dynamically.
+                          <p style={{ color: 'var(--emerald)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>
+                            ✨ Added successfully! You will now receive automatic notifications.
                           </p>
                         )}
                         {subscribingStatus === 'error' && (
-                          <p className="text-red-500 font-mono text-[10px] mt-3 uppercase tracking-wider flex items-center gap-1.5">
-                            ❌ Subscription error. Please check your network and try again.
+                          <p style={{ color: 'var(--red)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>
+                            ❌ Subscription error. Please verify input and retry.
                           </p>
                         )}
                       </div>
                     </div>
 
-                    {/* Dynamic Studio Dashboard Tab Selectors */}
-                    <div className="grid grid-cols-4 gap-2 text-center" id="dashboard_genre_toggles">
+                    {/* Dashboard Genre Toggles */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem' }} id="dashboard_genre_toggles">
                       {[
-                        { id: 'all', label: 'All Materials', count: posts.length },
-                        { id: 'lesson', label: 'Lessons 📚', count: posts.filter(p => !p.type || p.type === 'lesson').length },
-                        { id: 'video', label: 'Videos 🎥', count: posts.filter(p => p.type === 'video' || (!p.type && p.videoUrl)).length },
-                        { id: 'blog', label: 'Blogs ✍️', count: posts.filter(p => p.type === 'blog').length },
+                        { id: 'all', label: 'All', icon: '🎵', count: posts.length },
+                        { id: 'lesson', label: 'Lessons', icon: '📚', count: posts.filter(p => !p.type || p.type === 'lesson').length },
+                        { id: 'video', label: 'Videos', icon: '🎥', count: posts.filter(p => p.type === 'video' || (!p.type && p.videoUrl)).length },
+                        { id: 'blog', label: 'Blogs', icon: '✍️', count: posts.filter(p => p.type === 'blog').length },
                       ].map((item) => {
                         const isSelected = selectedType === item.id;
                         return (
                           <button
                             key={item.id}
-                            onClick={() => { setSelectedType(item.id as any); setSelectedCategory('All'); }}
-                            className={`relative rounded-2xl border p-3.5 transition-all duration-300 cursor-pointer focus:outline-none ${
-                              isSelected 
-                                ? 'border-amber-500 bg-zinc-900/60 text-white shadow-xl shadow-amber-500/5' 
-                                : 'border-zinc-805 bg-zinc-950/30 text-zinc-400 hover:text-white hover:border-zinc-700'
-                            }`}
+                            onClick={() => { setSelectedType(item.id); setSelectedCategory('All'); }}
+                            className="card flex-center"
+                            style={{
+                              padding: '0.75rem 0.5rem',
+                              border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border-color)',
+                              backgroundColor: isSelected ? 'var(--bg-app)' : 'var(--bg-card)',
+                              color: isSelected ? 'var(--text-main)' : 'var(--text-muted)',
+                              cursor: 'pointer',
+                              margin: 0,
+                              textAlign: 'center',
+                              borderRadius: '0.75rem'
+                            }}
                           >
-                            {isSelected && (
-                              <div className="absolute top-0 left-0 h-0.5 w-full bg-amber-500" />
-                            )}
-                            <div className="text-lg mb-1 leading-none">
-                              {item.id === 'all' ? '🎵' : item.id === 'lesson' ? '📚' : item.id === 'video' ? '🎥' : '✍️'}
-                            </div>
-                            <div className="text-[10px] sm:text-xs font-semibold tracking-tight truncate">{item.label}</div>
-                            <div className="font-mono text-[8px] text-zinc-500 mt-0.5 uppercase tracking-widest">{item.count} items</div>
+                            <div style={{ fontSize: '1.25rem', marginBottom: '0.25rem' }}>{item.icon}</div>
+                            <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{item.label}</div>
+                            <div style={{ fontSize: '0.625rem', fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', marginTop: '0.125rem' }}>{item.count} items</div>
                           </button>
                         );
                       })}
                     </div>
 
-                    {/* Search Index + Category Tags Panel filter */}
-                    <div className="rounded-2xl border border-zinc-800 bg-[#0F0F0F] p-5 shadow-inner space-y-4" id="search_indexing_hub">
-                      
-                      {/* Search Bar Input */}
-                      <div className="relative">
-                        <Search className="absolute top-3.5 left-4.5 h-4 w-4 text-zinc-550" />
+                    {/* Search Index Panel */}
+                    <div className="card" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }} id="search_indexing_hub">
+                      <div style={{ position: 'relative' }}>
+                        <Search className="h-4 w-4" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                         <input
                           type="text"
-                          placeholder="Search chord progressions, scales, Afrobeats tabs, or tags..."
+                          placeholder="Search progression chords, scales, Afrobeats tabs, or keys..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full rounded-full border border-zinc-800 bg-zinc-950/40 py-3 pl-12 pr-4 text-xs text-zinc-200 placeholder-zinc-500 focus:border-amber-500/50 focus:bg-[#0A0A0A] focus:outline-none transition-all"
+                          className="form-control"
+                          style={{ paddingLeft: '2.25rem', borderRadius: '2rem' }}
                         />
                       </div>
 
-                      {/* Horizontal Scroll categories list */}
-                      <div className="flex flex-wrap gap-1.5 items-center" id="category_tags_container">
-                        <Filter className="h-3.5 w-3.5 text-zinc-500 mr-2" />
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem', alignItems: 'center' }} id="category_tags_container">
+                        <Filter className="h-4 w-4 text-zinc-500" style={{ marginRight: '0.25rem' }} />
                         {categories.map((cat) => (
                           <button
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
-                            className={`rounded px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all focus:outline-none ${
-                              selectedCategory === cat
-                                ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10'
-                                : 'bg-zinc-900 text-zinc-400 hover:text-white border border-zinc-800 hover:bg-zinc-800'
-                            }`}
+                            className="btn"
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              fontSize: '0.6875rem',
+                              backgroundColor: selectedCategory === cat ? 'var(--primary)' : 'var(--bg-app)',
+                              color: selectedCategory === cat ? '#ffffff' : 'var(--text-muted)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '0.375rem'
+                            }}
                           >
                             {cat}
                           </button>
                         ))}
                       </div>
-
                     </div>
 
-                    {/* Explore Grid list of post items */}
-                    <div className="space-y-6">
-                      <div className="flex items-center justify-between border-b border-zinc-850 pb-2">
-                        <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.25em] pl-1">
-                          Curriculum Modules ({filteredPosts.length})
+                    {/* Explore list of post items */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                        <h3 style={{ fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.15rem', color: 'var(--text-muted)', margin: 0 }}>
+                          Classroom Materials ({filteredPosts.length})
                         </h3>
                         {selectedCategory !== 'All' && (
                           <button 
                             onClick={() => setSelectedCategory('All')} 
-                            className="text-[10px] text-amber-500 uppercase tracking-widest font-extrabold hover:underline"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '0.125rem 0.5rem', fontSize: '0.6875rem' }}
                           >
                             Reset filters
                           </button>
@@ -884,13 +873,13 @@ export default function App() {
                       </div>
 
                       {filteredPosts.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-zinc-800 py-16 text-center bg-zinc-950/50">
-                          <Music className="mx-auto h-10 w-10 text-zinc-700" />
-                          <h4 className="mt-4 text-sm font-serif italic text-zinc-300">No matching masterclass nodes found</h4>
-                          <p className="mt-1 text-xs text-zinc-500">Simplify your keyword query or click clear filters above.</p>
+                        <div style={{ padding: '4rem 2rem', textAlign: 'center', border: '1px dashed var(--border-color)', borderRadius: '1rem' }}>
+                          <Music className="h-8 w-8 text-zinc-500" style={{ margin: '0 auto' }} />
+                          <h4 style={{ margin: '0.5rem 0 0 0', fontFamily: 'var(--font-serif)' }}>No matching masterclasses yet</h4>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Simplify your keywords or reset active category tags.</p>
                         </div>
                       ) : (
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" id="explore_grid_posts">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.25rem' }}>
                           {filteredPosts.map((post) => (
                             <PostCard
                               key={post.postId}
@@ -904,79 +893,52 @@ export default function App() {
                       )}
                     </div>
 
-                    {/* Interactive Syllabus & Study Outline (Responsive - highly visible on all screens) */}
+                    {/* Roadmap Outline */}
                     {curriculum.length > 0 && (
-                      <div className={`rounded-3xl border p-8 space-y-6 transition-colors duration-300 ${
-                        isDarkMode 
-                          ? 'border-zinc-800 bg-[#0F0F0F] text-zinc-100' 
-                          : 'border-zinc-200 bg-white shadow-sm text-zinc-800'
-                      }`} id="interactive_syllabus_showcase">
-                        <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-4 ${
-                          isDarkMode ? 'border-zinc-800' : 'border-zinc-200'
-                        }`}>
+                      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} id="interactive_syllabus_showcase">
+                        <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                           <div>
-                            <h3 className={`text-xl font-serif italic flex items-center gap-2 ${
-                              isDarkMode ? 'text-white' : 'text-zinc-900'
-                            }`}>
-                              <Layers className="h-5 w-5 text-amber-500 font-bold" /> Interactive Syllabus & Academy Roadmap
+                            <h3 style={{ fontSize: '1rem', fontFamily: 'var(--font-serif)', display: 'flex', alignItems: 'center', gap: '0.375rem', margin: 0 }}>
+                              <Layers className="h-4 w-4 text-orange-500" /> Interactive Syllabus and Roadmap
                             </h3>
-                            <p className="text-xs text-zinc-500">A structured outline of masterclasses designed to take you from absolute beginner to gospel master.</p>
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', margin: '0.125rem 0 0 0' }}>Step-by-step masterclasses sequential guide layout.</p>
                           </div>
-                          <span className="rounded-full bg-amber-500/10 px-3 py-1 font-mono text-[10px] uppercase tracking-wider text-amber-500 font-bold">
-                            {curriculum.length} Core Modules
+                          <span className="badge badge-beginner" style={{ fontWeight: 'bold' }}>
+                            {curriculum.length} Core Topics
                           </span>
                         </div>
 
-                        <div className="grid gap-6 md:grid-cols-3">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
                           {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
                             const levelItems = curriculum.filter(i => i.level === level);
                             return (
-                              <div key={level} className={`rounded-2xl p-5 border flex flex-col transition-colors ${
-                                isDarkMode 
-                                  ? 'bg-zinc-950/45 border-zinc-900/60' 
-                                  : 'bg-zinc-50 border-zinc-205/60 border-zinc-200'
-                              }`}>
-                                <div className="flex items-center justify-between mb-4">
-                                  <span className={`text-[9px] font-mono font-black uppercase tracking-widest px-2.5 py-1 rounded-md ${
-                                    level === 'Beginner' ? 'bg-emerald-500/15 text-emerald-450' :
-                                    level === 'Intermediate' ? 'bg-blue-500/15 text-blue-400' :
-                                    'bg-red-500/15 text-red-500'
-                                  }`}>
+                              <div key={level} className="card" style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', margin: 0, padding: '1rem' }}>
+                                <div className="flex-between" style={{ marginBottom: '0.75rem' }}>
+                                  <span className="badge badge-intermediate" style={{ fontWeight: 'bold', fontSize: '0.625rem' }}>
                                     {level} Level
                                   </span>
-                                  <span className="text-[10px] font-mono text-zinc-500">
-                                    {levelItems.length} {levelItems.length === 1 ? 'topic' : 'topics'}
-                                  </span>
+                                  <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>{levelItems.length} modules</span>
                                 </div>
 
                                 {levelItems.length === 0 ? (
-                                  <p className="text-[11px] text-zinc-500 italic py-4">Roadmap outline updates coming soon...</p>
+                                  <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Roadmap outline updates pending...</p>
                                 ) : (
-                                  <div className="space-y-4 flex-1">
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                     {levelItems.map((item) => {
                                       const hasLink = posts.some(p => p.postId === item.postId);
                                       return (
-                                        <div key={item.itemId} className={`group relative pl-4 border-l transition-all ${
-                                          isDarkMode ? 'border-zinc-800' : 'border-zinc-250 border-zinc-200'
-                                        }`}>
-                                          <div className="absolute left-0 top-1.5 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-amber-500 group-hover:bg-amber-400 transition-colors" />
-                                          <h4 className={`text-xs font-semibold ${
-                                            isDarkMode ? 'text-zinc-200' : 'text-zinc-800'
-                                          }`}>
-                                            {item.title}
-                                          </h4>
-                                          <p className="text-[10px] text-zinc-500 mt-1 leading-normal">
-                                            {item.description}
-                                          </p>
+                                        <div key={item.itemId} style={{ paddingLeft: '0.5rem', borderLeft: '1.5px solid var(--border-color)' }}>
+                                          <h4 style={{ fontSize: '0.75rem', fontWeight: 'bold', margin: 0, color: 'var(--text-main)' }}>{item.title}</h4>
+                                          <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', margin: '0.125rem 0 0 0', lineHeight: 1.3 }}>{item.description}</p>
                                           {item.postId && hasLink && (
                                             <button
                                               onClick={() => {
                                                 const p = posts.find(post => post.postId === item.postId);
                                                 if (p) setSelectedPost(p);
                                               }}
-                                              className="mt-2 inline-flex items-center gap-1 text-[10px] font-mono font-bold text-amber-500 hover:text-amber-400 uppercase tracking-widest transition-colors cursor-pointer"
+                                              style={{ display: 'inline-block', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.6875rem', color: 'var(--primary)', fontWeight: 'bold', marginTop: '0.25rem', padding: 0 }}
                                             >
-                                              ⚡ Open Masterclass →
+                                              ⚡ Open lesson →
                                             </button>
                                           )}
                                         </div>
@@ -991,76 +953,55 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Student Reviews & Testimonials Section */}
+                    {/* Testimonials */}
                     {reviews.length > 0 && (
-                      <div className={`rounded-3xl border p-8 space-y-6 transition-colors duration-300 ${
-                        isDarkMode 
-                          ? 'border-zinc-800 bg-[#0F0F0F] text-zinc-100' 
-                          : 'border-zinc-200 bg-white shadow-sm text-zinc-800'
-                      }`} id="student_reviews_section">
-                        <div className={`flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-4 ${
-                          isDarkMode ? 'border-zinc-800' : 'border-zinc-200'
-                        }`}>
+                      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} id="student_reviews_section">
+                        <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
                           <div>
-                            <h3 className={`text-xl font-serif italic flex items-center gap-2 ${
-                              isDarkMode ? 'text-white' : 'text-zinc-900'
-                            }`}>
-                              <Star className="h-5 w-5 text-amber-500 fill-amber-500" /> Student Testimonials
+                            <h3 style={{ fontSize: '1rem', fontFamily: 'var(--font-serif)', display: 'flex', alignItems: 'center', gap: '0.375rem', margin: 0 }}>
+                              <Star className="h-4 w-4 text-amber-500 fill-amber-500" /> Student Praise
                             </h3>
-                            <p className="text-xs text-zinc-500">Real feedback from guitarists who found their sound and owned their vibration.</p>
+                            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', margin: '0.125rem 0 0 0' }}>Real feedback from guitarists who owned their chord vibration!</p>
                           </div>
-                          
-                          {/* Student Review Actions */}
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-1">
+
+                          <div className="flex-row" style={{ gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <div className="flex-row" style={{ gap: '0.125rem' }}>
                               {[1, 2, 3, 4, 5].map((s) => (
-                                <Star key={s} className="h-4 w-4 text-amber-500 fill-amber-500" />
+                                <Star key={s} className="h-3.5 w-3.5" style={{ fill: 'var(--amber)', color: 'var(--amber)' }} />
                               ))}
-                              <span className="text-xs font-mono font-bold text-zinc-400 ml-1.5 uppercase tracking-widest">4.9/5 Average rating</span>
                             </div>
-                            
                             {user ? (
                               <button
                                 onClick={() => { setShowWriteReview(!showWriteReview); setReviewFeedback(null); }}
-                                className="rounded-xl bg-zinc-900 text-zinc-350 hover:text-white border border-zinc-700 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-zinc-800 transition-all cursor-pointer"
+                                className="btn btn-secondary btn-sm"
                               >
-                                {showWriteReview ? 'Close Testimonial Form' : '✍️ Write review'}
+                                {showWriteReview ? 'Close Testimonial form' : '✍️ Testify praise'}
                               </button>
                             ) : (
-                              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
-                                (Sign in to submit rating)
-                              </span>
+                              <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>(Google sign-in to review)</span>
                             )}
                           </div>
                         </div>
 
                         {/* Interactive Review writer component */}
                         {showWriteReview && user && (
-                          <form onSubmit={handlePublishStudentReview} className={`rounded-2xl p-5 border animate-fadeIn space-y-4 w-full ${
-                            isDarkMode ? 'bg-zinc-950/50 border-zinc-800' : 'bg-zinc-50 border-zinc-200'
-                          }`}>
-                            <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
-                              <h4 className={`text-xs font-serif italic ${isDarkMode ? 'text-white' : 'text-zinc-900'}`}>
-                                Share your learning story with the Academy!
-                              </h4>
-                              <span className="text-[10px] font-mono text-zinc-500">Posting as {user.displayName || user.email}</span>
+                          <form onSubmit={handlePublishStudentReview} className="card animate-fade" style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.75rem', margin: 0, padding: '1rem' }}>
+                            <div className="flex-between">
+                              <h4 style={{ fontSize: '0.75rem', fontFamily: 'var(--font-serif)', margin: 0 }}>Write dynamic testimonial rating</h4>
+                              <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>Posting as {user.displayName}</span>
                             </div>
 
                             {reviewFeedback && (
-                              <div className="rounded-xl border border-emerald-950 bg-emerald-950/20 px-3.5 py-2.5 text-[11px] text-emerald-400 font-medium">
-                                {reviewFeedback}
-                              </div>
+                              <p style={{ color: 'var(--emerald)', fontSize: '0.75rem', margin: 0, fontWeight: 'bold' }}>{reviewFeedback}</p>
                             )}
 
-                            <div className="grid gap-4 sm:grid-cols-2">
-                              <div>
-                                <label className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Guitar Skill Proficiency</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Proficiency Level</label>
                                 <select
                                   value={studentLevel}
-                                  onChange={(e: any) => setStudentLevel(e.target.value)}
-                                  className={`w-full rounded-xl border px-3.5 py-2 text-xs focus:outline-none focus:border-amber-500 ${
-                                    isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-200 text-zinc-700'
-                                  }`}
+                                  onChange={(e) => setStudentLevel(e.target.value)}
+                                  className="form-control"
                                 >
                                   <option value="Beginner">Beginner level</option>
                                   <option value="Intermediate">Intermediate level</option>
@@ -1068,50 +1009,47 @@ export default function App() {
                                 </select>
                               </div>
 
-                              <div>
-                                <label className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Star Rating</label>
-                                <div className="flex items-center gap-2 mt-1">
+                              <div className="form-group" style={{ marginBottom: 0 }}>
+                                <label className="form-label">Score (1-5 Stars)</label>
+                                <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
                                   {[1, 2, 3, 4, 5].map((stars) => (
                                     <button
                                       type="button"
                                       key={stars}
                                       onClick={() => setStudentRating(stars)}
-                                      className="focus:outline-none transition-transform hover:scale-110 cursor-pointer"
+                                      style={{ border: 'none', background: 'none', cursor: 'pointer' }}
                                     >
                                       <Star 
-                                        className={`h-6 w-6 ${
-                                          stars <= studentRating ? 'text-amber-500 fill-amber-500' : 'text-zinc-600'
-                                        }`} 
+                                        className="h-5 w-5" 
+                                        style={{
+                                          color: 'var(--amber)',
+                                          fill: stars <= studentRating ? 'var(--amber)' : 'none'
+                                        }} 
                                       />
                                     </button>
                                   ))}
-                                  <span className="text-xs font-mono font-bold text-zinc-400 pl-1">
-                                    ({studentRating} Stars)
-                                  </span>
                                 </div>
                               </div>
                             </div>
 
-                            <div>
-                              <label className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">Learning Testimonial Text</label>
+                            <div className="form-group" style={{ marginBottom: 0 }}>
+                              <label className="form-label">Testimonial feedback text</label>
                               <textarea
-                                rows={3}
+                                rows={2}
                                 value={studentComment}
                                 onChange={(e) => setStudentComment(e.target.value)}
-                                placeholder="Write 1-2 positive sentences about your experience..."
-                                className={`w-full rounded-xl border p-3.5 text-xs focus:outline-none focus:border-amber-500 ${
-                                  isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-200' : 'bg-white border-zinc-250 text-zinc-800'
-                                }`}
+                                placeholder="e.g. This simple academy is beautiful. Triads templates saved me weeks..."
+                                className="form-control"
                                 maxLength={800}
                                 required
                               />
                             </div>
 
-                            <div className="flex justify-end pt-1">
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                               <button
                                 type="submit"
                                 disabled={isSubmittingReview}
-                                className="rounded-xl bg-amber-500 hover:bg-amber-400 text-black px-5 py-2.5 text-xs font-extrabold uppercase tracking-wide transition-all disabled:opacity-50 cursor-pointer"
+                                className="btn btn-primary btn-sm"
                               >
                                 {isSubmittingReview ? 'Publishing...' : 'Publish Testimonial Review'}
                               </button>
@@ -1119,28 +1057,22 @@ export default function App() {
                           </form>
                         )}
 
-                        {reviewFeedback && !showWriteReview && (
-                          <div className="rounded-xl border border-emerald-950 bg-emerald-950/20 px-3.5 py-2.5 text-[11px] text-emerald-400 font-medium animate-fadeIn">
-                            {reviewFeedback}
-                          </div>
-                        )}
-
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
                           {reviews.map((rev) => (
-                            <div key={rev.reviewId} className="rounded-2xl bg-zinc-950 p-5 border border-zinc-900 flex flex-col justify-between hover:border-zinc-800 transition-colors">
+                            <div key={rev.reviewId} className="card animate-fade" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', border: '1px solid var(--border-color)', margin: 0, padding: '1rem' }}>
                               <div>
-                                <div className="flex items-center gap-0.5 mb-3">
-                                  {Array.from({ length: rev.rating }).map((_, i) => (
-                                    <Star key={i} className="h-3 w-3 text-amber-400 fill-amber-400" />
+                                <div style={{ display: 'flex', gap: '0.125rem', marginBottom: '0.5rem' }}>
+                                  {Array.from({ length: rev.rating || 5 }).map((_, i) => (
+                                    <Star key={i} className="h-3 w-3" style={{ fill: 'var(--amber)', color: 'var(--amber)' }} />
                                   ))}
                                 </div>
-                                <p className="text-xs text-zinc-300 leading-relaxed italic font-light">
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: 0, lineHeight: 1.4 }}>
                                   "{rev.comment}"
                                 </p>
                               </div>
-                              <div className="mt-4 pt-3 border-t border-zinc-900 flex items-center justify-between text-[11px]">
-                                <span className="font-bold text-zinc-400">{rev.name}</span>
-                                <span className="rounded bg-amber-500/10 px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-amber-400">
+                              <div className="flex-between" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.5rem', marginTop: '0.75rem', fontSize: '0.6875rem' }}>
+                                <span style={{ fontWeight: 'bold' }}>{rev.name}</span>
+                                <span className="badge badge-intermediate" style={{ fontSize: '0.625rem' }}>
                                   {rev.proficientLevel}
                                 </span>
                               </div>
@@ -1150,10 +1082,10 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Low-bandwidth offline optimization disclaimer footer */}
-                    <footer className="rounded-2xl bg-[#0F0F0F] p-8 text-center border border-zinc-800/60 max-w-7xl mx-auto space-y-2">
-                      <p className="font-serif italic text-zinc-200">Vibration Guitar Academy</p>
-                      <p className="font-mono text-[9px] leading-relaxed text-zinc-500 uppercase tracking-[0.25em]">
+                    {/* Low-bandwidth optimized disclaimer footer */}
+                    <footer className="card" style={{ padding: '1.5rem', textAlign: 'center', backgroundColor: '#0F0F0F', border: '1px solid var(--border-color)' }}>
+                      <p style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', margin: 0, color: '#ffffff' }}>Vibration Guitar Academy</p>
+                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '0.625rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15rem', marginTop: '0.5rem', margin: 0 }}>
                         Low-bandwidth optimized. Custom tailored exclusively for students of Vibration Guitar Academy.
                       </p>
                     </footer>
