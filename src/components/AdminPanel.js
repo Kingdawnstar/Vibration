@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, OperationType, handleFirestoreError } from '../firebase.js';
-import { collection, setDoc, doc, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { collection, setDoc, doc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
 import { 
   BookOpen, Sparkles, Plus, Trash2, FileText, Image as ImageIcon, 
   Send, Loader2, CheckCircle, Eye, Star, Layers, Calendar, ClipboardList,
@@ -52,6 +52,7 @@ export default function AdminPanel({
   const [currPostId, setCurrPostId] = useState('');
   const [currOrder, setCurrOrder] = useState(1);
   const [isPublishingCurriculum, setIsPublishingCurriculum] = useState(false);
+  const [editingCurriculumId, setEditingCurriculumId] = useState(null);
 
   // Loading and system notification banners
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -171,6 +172,36 @@ export default function AdminPanel({
         // Add document with handleFirestoreError security mappings
         await setDoc(docRef, newPostData);
         setNotifSuccess('Lesson published successfully! Students have been notified.');
+
+        // Dispatch email notification alerts to all curriculum subscribers
+        try {
+          const subscribersSnap = await getDocs(collection(db, 'subscribers'));
+          const subscriberEmails = [];
+          subscribersSnap.forEach((doc) => {
+            const data = doc.data();
+            if (data && data.email) {
+              subscriberEmails.push(data.email);
+            }
+          });
+
+          if (subscriberEmails.length > 0) {
+            console.log(`Dispatched automated notifications for "${title}" to ${subscriberEmails.length} subscribers.`);
+            await fetch('/api/notify', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                emails: subscriberEmails,
+                postTitle: title,
+                postPreview: content.length > 150 ? content.substring(0, 150) + '...' : content,
+                postUrl: window.location.origin
+              })
+            });
+          }
+        } catch (notifErr) {
+          console.error('Email subscriber notification failed to dispatch:', notifErr);
+        }
       }
 
       // Reset form on complete
@@ -335,6 +366,24 @@ export default function AdminPanel({
     }
   };
 
+  const handleEditCurriculum = (item) => {
+    setEditingCurriculumId(item.itemId);
+    setCurrLevel(item.level || 'Beginner');
+    setCurrTitle(item.title || '');
+    setCurrDesc(item.description || '');
+    setCurrPostId(item.postId || '');
+    setCurrOrder(item.order || 1);
+  };
+
+  const handleCancelEditCurriculum = () => {
+    setEditingCurriculumId(null);
+    setCurrLevel('Beginner');
+    setCurrTitle('');
+    setCurrDesc('');
+    setCurrPostId('');
+    setCurrOrder(1);
+  };
+
   const handlePublishCurriculum = async (e) => {
     e.preventDefault();
     if (!currTitle || !currDesc) {
@@ -343,23 +392,38 @@ export default function AdminPanel({
     }
     setIsPublishingCurriculum(true);
     try {
-      const docRef = doc(collection(db, 'curriculum'));
-      await setDoc(docRef, {
-        itemId: docRef.id,
-        level: currLevel,
-        title: currTitle,
-        description: currDesc,
-        postId: currPostId || '',
-        order: Number(currOrder) || 1,
-        createdAt: new Date().toISOString()
-      });
+      if (editingCurriculumId) {
+        const docRef = doc(db, 'curriculum', editingCurriculumId);
+        await setDoc(docRef, {
+          itemId: editingCurriculumId,
+          level: currLevel,
+          title: currTitle,
+          description: currDesc,
+          postId: currPostId || '',
+          order: Number(currOrder) || 1,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        setEditingCurriculumId(null);
+        alert('Syllabus item updated successfully!');
+      } else {
+        const docRef = doc(collection(db, 'curriculum'));
+        await setDoc(docRef, {
+          itemId: docRef.id,
+          level: currLevel,
+          title: currTitle,
+          description: currDesc,
+          postId: currPostId || '',
+          order: Number(currOrder) || 1,
+          createdAt: new Date().toISOString()
+        });
+        alert('Syllabus item added successfully!');
+      }
       setCurrTitle('');
       setCurrDesc('');
       setCurrPostId('');
       setCurrOrder(1);
-      alert('Syllabus item added successfully!');
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'curriculum');
+      handleFirestoreError(err, editingCurriculumId ? OperationType.UPDATE : OperationType.CREATE, 'curriculum');
     } finally {
       setIsPublishingCurriculum(false);
     }
@@ -848,12 +912,25 @@ export default function AdminPanel({
         <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth > 992 ? '2fr 1fr' : '1fr', gap: '1.5rem' }} id="admin_curriculum_section">
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div className="card">
-              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-serif)', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Layers className="h-5 w-5 text-orange-600" /> Syllabus Topic Configuration
-                </h2>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Align topics dynamically inside student course levels</p>
+            <div className="card" style={{ border: editingCurriculumId ? '2px solid var(--primary)' : '1px solid var(--border-color)' }}>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-serif)', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                    <Layers className="h-5 w-5 text-orange-600" /> {editingCurriculumId ? 'Edit Syllabus Topic' : 'Syllabus Topic Configuration'}
+                  </h2>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0' }}>
+                    {editingCurriculumId ? 'Updating existing syllabus configuration point' : 'Align topics dynamically inside student course levels'}
+                  </p>
+                </div>
+                {editingCurriculumId && (
+                  <button 
+                    onClick={handleCancelEditCurriculum}
+                    className="btn btn-secondary"
+                    style={{ fontSize: '0.6875rem', padding: '0.25rem 0.5rem' }}
+                  >
+                    Cancel Edit
+                  </button>
+                )}
               </div>
 
               <form onSubmit={handlePublishCurriculum} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -924,14 +1001,23 @@ export default function AdminPanel({
                   />
                 </div>
 
-                <div className="flex-row" style={{ justifyContent: 'flex-end' }}>
+                <div className="flex-row" style={{ justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  {editingCurriculumId && (
+                    <button
+                      type="button"
+                      onClick={handleCancelEditCurriculum}
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                  )}
                   <button
                     type="submit"
                     disabled={isPublishingCurriculum}
                     className="btn btn-primary"
                   >
                     {isPublishingCurriculum ? <Loader2 className="h-4 w-4 animate-spin" /> : <ClipboardList className="h-4 w-4" />}
-                    <span>Add curriculum point</span>
+                    <span>{editingCurriculumId ? 'Save Syllabus Changes' : 'Add curriculum point'}</span>
                   </button>
                 </div>
               </form>
@@ -957,20 +1043,28 @@ export default function AdminPanel({
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginLeft: '0.25rem', marginTop: '0.25rem' }}>
                           {items.map((it) => (
-                            <div key={it.itemId} className="card animate-fade" style={{ padding: '0.5rem 0.75rem', margin: 0 }}>
+                            <div key={it.itemId} className="card animate-fade" style={{ padding: '0.5rem 0.75rem', margin: 0, border: editingCurriculumId === it.itemId ? '1px solid var(--primary)' : '1px solid var(--border-color)' }}>
                               <div className="flex-between">
-                                <div>
+                                <div style={{ overflow: 'hidden', marginRight: '0.5rem' }}>
                                   <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--primary)' }}>#{it.order} </span>
                                   <span style={{ fontSize: '0.75rem', fontWeight: '600' }}>{it.title}</span>
                                 </div>
-                                <button
-                                  onClick={() => handleDeleteCurriculum(it.itemId)}
-                                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '0.625rem', fontWeight: 'bold' }}
-                                >
-                                  Delete
-                                </button>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                                  <button
+                                    onClick={() => handleEditCurriculum(it)}
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--primary)', fontSize: '0.625rem', fontWeight: 'bold' }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteCurriculum(it.itemId)}
+                                    style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '0.625rem', fontWeight: 'bold' }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
-                              <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>{it.description}</p>
+                              <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: '0.25rem', lineHeight: '1.3' }}>{it.description}</p>
                             </div>
                           ))}
                         </div>

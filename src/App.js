@@ -737,6 +737,66 @@ export default function App() {
                       </div>
                     </div>
 
+                    {/* Roadmap Outline */}
+                    {curriculum.length > 0 && (
+                      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', border: '1px solid var(--border-color)', borderRadius: '1.25rem' }} id="interactive_syllabus_showcase">
+                        <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+                          <div>
+                            <h3 style={{ fontSize: '1.25rem', fontFamily: 'var(--font-serif)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, color: 'var(--text-main)' }}>
+                              <Layers className="h-5 w-5 text-orange-500" /> Academy Syllabus & Class Tracks
+                            </h3>
+                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0' }}>Step-by-step masterclasses and course roadmaps.</p>
+                          </div>
+                          <span className="badge badge-beginner" style={{ fontWeight: 'bold' }}>
+                            {curriculum.length} core topics
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                          {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
+                            const levelItems = curriculum.filter(i => i.level === level);
+                            return (
+                              <div key={level} className="card" style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', margin: 0, padding: '1.25rem', borderRadius: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
+                                  <span className={`badge ${level === 'Beginner' ? 'badge-beginner' : level === 'Intermediate' ? 'badge-intermediate' : 'badge-advanced'}`} style={{ fontWeight: 'bold', fontSize: '0.6875rem' }}>
+                                    {level} Track
+                                  </span>
+                                  <span style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{levelItems.length} modules</span>
+                                </div>
+
+                                {levelItems.length === 0 ? (
+                                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '0.5rem 0' }}>Roadmap outline updates pending...</p>
+                                ) : (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {levelItems.map((item) => {
+                                      const hasLink = posts.some(p => p.postId === item.postId);
+                                      return (
+                                        <div key={item.itemId} style={{ paddingLeft: '0.75rem', borderLeft: '2px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
+                                          <h4 style={{ fontSize: '0.8125rem', fontWeight: 'bold', margin: 0, color: 'var(--text-main)' }}>{item.title}</h4>
+                                          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.3 }}>{item.description}</p>
+                                          {item.postId && hasLink && (
+                                            <button
+                                              onClick={() => {
+                                                const p = posts.find(post => post.postId === item.postId);
+                                                if (p) setSelectedPost(p);
+                                              }}
+                                              style={{ display: 'inline-flex', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 'bold', marginTop: '0.25rem', padding: 0 }}
+                                            >
+                                              ⚡ Open lesson →
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                     {/* VIP Student Alert Desk Form */}
                     <div 
                       className="card"
@@ -893,65 +953,7 @@ export default function App() {
                       )}
                     </div>
 
-                    {/* Roadmap Outline */}
-                    {curriculum.length > 0 && (
-                      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }} id="interactive_syllabus_showcase">
-                        <div className="flex-between" style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
-                          <div>
-                            <h3 style={{ fontSize: '1rem', fontFamily: 'var(--font-serif)', display: 'flex', alignItems: 'center', gap: '0.375rem', margin: 0 }}>
-                              <Layers className="h-4 w-4 text-orange-500" /> Interactive Syllabus and Roadmap
-                            </h3>
-                            <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', margin: '0.125rem 0 0 0' }}>Step-by-step masterclasses sequential guide layout.</p>
-                          </div>
-                          <span className="badge badge-beginner" style={{ fontWeight: 'bold' }}>
-                            {curriculum.length} Core Topics
-                          </span>
-                        </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                          {['Beginner', 'Intermediate', 'Advanced'].map((level) => {
-                            const levelItems = curriculum.filter(i => i.level === level);
-                            return (
-                              <div key={level} className="card" style={{ backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-color)', margin: 0, padding: '1rem' }}>
-                                <div className="flex-between" style={{ marginBottom: '0.75rem' }}>
-                                  <span className="badge badge-intermediate" style={{ fontWeight: 'bold', fontSize: '0.625rem' }}>
-                                    {level} Level
-                                  </span>
-                                  <span style={{ fontSize: '0.625rem', color: 'var(--text-muted)' }}>{levelItems.length} modules</span>
-                                </div>
-
-                                {levelItems.length === 0 ? (
-                                  <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>Roadmap outline updates pending...</p>
-                                ) : (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {levelItems.map((item) => {
-                                      const hasLink = posts.some(p => p.postId === item.postId);
-                                      return (
-                                        <div key={item.itemId} style={{ paddingLeft: '0.5rem', borderLeft: '1.5px solid var(--border-color)' }}>
-                                          <h4 style={{ fontSize: '0.75rem', fontWeight: 'bold', margin: 0, color: 'var(--text-main)' }}>{item.title}</h4>
-                                          <p style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', margin: '0.125rem 0 0 0', lineHeight: 1.3 }}>{item.description}</p>
-                                          {item.postId && hasLink && (
-                                            <button
-                                              onClick={() => {
-                                                const p = posts.find(post => post.postId === item.postId);
-                                                if (p) setSelectedPost(p);
-                                              }}
-                                              style={{ display: 'inline-block', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.6875rem', color: 'var(--primary)', fontWeight: 'bold', marginTop: '0.25rem', padding: 0 }}
-                                            >
-                                              ⚡ Open lesson →
-                                            </button>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Testimonials */}
                     {reviews.length > 0 && (
